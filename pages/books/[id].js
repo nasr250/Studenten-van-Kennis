@@ -20,7 +20,7 @@ export default function BookPage() {
         .from("lessen")
         .select("*")
         .eq("boek_id", id)
-        .order("order_num")
+        .order("volgorde_nummer", { ascending: true })
         .then((res) => setLessen(res.data));
     }
   }, [id]);
