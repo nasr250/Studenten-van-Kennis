@@ -1,14 +1,13 @@
-
-import { useRouter } from 'next/router';
-import { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabase';
+import { useRouter } from "next/router";
+import { useEffect, useState } from "react";
+import { supabase } from "../../lib/supabase";
 
 export default function LessonPage() {
   const router = useRouter();
   const { id } = router.query;
 
-  const [lesson, setLesson] = useState(null);
-  const [note, setNote] = useState('');
+  const [les, setLes] = useState(null);
+  const [notitie, setNotitie] = useState("");
   const [user, setUser] = useState(null);
 
   useEffect(() => {
@@ -17,32 +16,42 @@ export default function LessonPage() {
 
   useEffect(() => {
     if (id) {
-      supabase.from('lessons').select('*').eq('id', id).single().then(res => setLesson(res.data));
+      supabase
+        .from("lessen")
+        .select("*")
+        .eq("id", id)
+        .single()
+        .then((res) => setLes(res.data));
     }
   }, [id]);
 
-  const saveNote = async () => {
-    await supabase.from('notes').upsert({
+  const saveNotitie = async () => {
+    await supabase.from("notities").upsert({
       user_id: user.id,
-      lesson_id: id,
-      content: note
+      les_id: id,
+      content: notitie,
     });
-    alert('Notitie opgeslagen!');
+    alert("Notitie opgeslagen!");
   };
 
-  if (!lesson) return <p>Laden...</p>;
+  if (!les) return <p>Laden...</p>;
 
   return (
     <div>
-      <h1>{lesson.title}</h1>
-      <iframe width="100%" height="315" src={lesson.video_url} allowFullScreen />
+      <h1>{les.title}</h1>
+      <iframe width="100%" height="315" src={les.video_url} allowFullScreen />
       <textarea
         placeholder="Jouw notitie"
-        value={note}
-        onChange={(e) => setNote(e.target.value)}
+        value={notitie}
+        onChange={(e) => setNotitie(e.target.value)}
         className="w-full p-2 border mt-4"
       />
-      <button onClick={saveNote} className="mt-2 px-4 py-2 bg-blue-600 text-white">Opslaan</button>
+      <button
+        onClick={saveNotitie}
+        className="mt-2 px-4 py-2 bg-blue-600 text-white"
+      >
+        Opslaan
+      </button>
     </div>
   );
 }
