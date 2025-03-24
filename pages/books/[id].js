@@ -20,7 +20,7 @@ export default function BookPage() {
         .from("lessen")
         .select("*")
         .eq("boek_id", id)
-        .order("order_num")
+        .order("volgorde_nummer", { ascending: true })
         .then((res) => setLessen(res.data));
     }
   }, [id]);
@@ -35,13 +35,17 @@ export default function BookPage() {
         📘 Download PDF
       </a>
       <h2>Lessen</h2>
-      <ul>
-        {lessen.map((les) => (
-          <li key={les.id}>
-            <a href={`/lessen/${les.id}`}>{les.title}</a>
-          </li>
-        ))}
-      </ul>
+      {lessen && lessen.length > 0 ? (
+        <ul>
+          {lessen.map((les) => (
+            <li key={les.id}>
+              <a href={`/lessen/${les.id}`}>{les.title}</a>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p>Geen lessen beschikbaar</p>
+      )}
     </div>
   );
 }
