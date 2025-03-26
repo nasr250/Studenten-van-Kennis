@@ -35,10 +35,20 @@ globalThis.__BUILD_MANIFEST = {
       "static/chunks/main.js",
       "static/chunks/pages/lessen/[id].js"
     ],
-    "/toets/[id]": [
+    "/login": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
-      "static/chunks/pages/toets/[id].js"
+      "static/chunks/pages/login.js"
+    ],
+    "/mijn-boeken": [
+      "static/chunks/webpack.js",
+      "static/chunks/main.js",
+      "static/chunks/pages/mijn-boeken.js"
+    ],
+    "/voortgang": [
+      "static/chunks/webpack.js",
+      "static/chunks/main.js",
+      "static/chunks/pages/voortgang.js"
     ]
   },
   "ampFirstPages": []

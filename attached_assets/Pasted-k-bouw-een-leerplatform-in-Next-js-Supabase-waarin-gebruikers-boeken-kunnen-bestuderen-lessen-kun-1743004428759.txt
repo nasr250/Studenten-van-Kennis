@@ -1,0 +1,78 @@
+k bouw een leerplatform in Next.js + Supabase waarin gebruikers boeken kunnen bestuderen, lessen kunnen bekijken (met video/audio), per les notities maken, quizvragen beantwoorden, en uiteindelijk een eindtoets doen. Dit project is gestart in Replit en heet Studenten-van-Kennis.
+
+Help me als volgt om het MVP compleet te maken:
+
+✅ 1. AUTHENTICATIE
+Gebruik Supabase Auth
+
+Maak een werkende loginpagina (/login)
+
+Gebruik supabase.auth.signInWithPassword()
+
+Bij succesvolle login: redirect naar /
+
+Voeg uitlogknop toe (supabase.auth.signOut())
+
+Toon navigatiebalk met "Home", "Mijn boeken", "Voortgang", "Log uit"
+
+Gebruik supabase.auth.getUser() om huidige gebruiker op te halen
+
+🛡️ 2. ADMIN LOGIN
+Voeg in Supabase een extra kolom toe aan auth.users metadata: is_admin: true
+
+Check in frontend of gebruiker user.user_metadata.is_admin is
+
+Alleen admin mag:
+
+Nieuwe boeken, lessen, quizvragen toevoegen
+
+Beheerpanelen zien (bijv. /admin)
+
+📚 3. Boekenlogica
+Haal alle boeken op uit de boeken tabel (Supabase)
+
+Toon deze in /pages/index.js als klikbare links naar hun detailpagina
+
+Maak /pages/boeken/[id].js aan:
+
+Haalt het boek op
+
+Toont gekoppelde lessen (lessen tabel, via boek_id)
+
+Linkt door naar /lessen/[id]
+
+🎧 4. Lespagina
+/pages/lessen/[id].js:
+
+Toont embedded les_url (YouTube/SoundCloud)
+
+Gebruiker kan notities maken (opslaan in notities)
+
+Laadt bijhorende quizvraag uit les_toetsen
+
+Toont feedback als vraag is beantwoord
+
+🧪 5. Eindtoets
+Als alle lessen van een boek voltooid zijn, toon link naar /eindtoets/[boek_id].js
+
+Haal vragen op uit eind_toetsen
+
+Toets maken, score tonen, opslaan in voortgang
+
+📈 6. Voortgang
+Sla voortgang per gebruiker op in voortgang:
+
+voltooide_lessons: JSON-array van les-IDs
+
+voltooide_eindtoets: boolean
+
+Update bij afronden van een les of eindtoets
+
+🔐 7. RLS Policies Supabase
+Voeg policies toe zodat:
+
+Alleen de gebruiker zijn eigen notities en voortgang ziet
+
+Alleen admin gebruiker content kan beheren
+
+✨ Gebruik TailwindCSS als dat al aanwezig is voor styling.

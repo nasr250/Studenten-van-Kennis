@@ -1,12 +1,11 @@
-
-import { useState } from 'react';
-import { supabase } from '../lib/supabase';
-import { useRouter } from 'next/router';
-import styles from '../styles/Login.module.css';
+import { useState } from "react";
+import { supabase } from "../lib/supabase";
+import { useRouter } from "next/router";
+import styles from "../styles/Login.module.css";
 
 export default function Login() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
   const router = useRouter();
 
@@ -15,10 +14,10 @@ export default function Login() {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
-        password
+        password,
       });
       if (error) throw error;
-      router.push('/');
+      router.push("/");
     } catch (error) {
       setError(error.message);
     }

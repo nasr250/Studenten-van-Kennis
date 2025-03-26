@@ -1,4 +1,3 @@
-
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
@@ -79,14 +78,9 @@ export default function LessonPage() {
   return (
     <div className={styles.container}>
       <h1>{les.titel}</h1>
-      
+
       <div className={styles.videoContainer}>
-        <iframe
-          width="100%"
-          height="315"
-          src={les.video_url}
-          allowFullScreen
-        />
+        <iframe width="100%" height="315" src={les.video_url} allowFullScreen />
       </div>
 
       <div className={styles.contentSection}>
@@ -122,9 +116,12 @@ export default function LessonPage() {
 
       <div className={styles.examSection}>
         <h2>Eindtoets</h2>
-        <p>Wanneer je klaar bent met de les, kun je de eindtoets maken om je kennis te testen.</p>
-        <button 
-          onClick={() => router.push(`/toets/${id}`)} 
+        <p>
+          Wanneer je klaar bent met de les, kun je de eindtoets maken om je
+          kennis te testen.
+        </p>
+        <button
+          onClick={() => router.push(`/toets/${id}`)}
           className={styles.examButton}
         >
           Start Eindtoets

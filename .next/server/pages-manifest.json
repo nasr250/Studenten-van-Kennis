@@ -3,7 +3,9 @@
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
   "/": "pages/index.js",
+  "/login": "pages/login.js",
+  "/mijn-boeken": "pages/mijn-boeken.js",
   "/boeken/[id]": "pages/boeken/[id].js",
   "/lessen/[id]": "pages/lessen/[id].js",
-  "/toets/[id]": "pages/toets/[id].js"
+  "/voortgang": "pages/voortgang.js"
 }

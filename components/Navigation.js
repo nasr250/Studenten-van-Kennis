@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import Link from 'next/link';
@@ -7,12 +6,18 @@ import styles from '../styles/Navigation.module.css';
 
 export default function Navigation() {
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true); // Toevoegen om te controleren of de gebruiker geladen is
   const router = useRouter();
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    // Haal de ingelogde gebruiker op en kijk of ze admin zijn
+    const fetchUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
-    });
+      setLoading(false);
+    };
+
+    fetchUser();
   }, []);
 
   const handleLogout = async () => {
@@ -20,16 +25,19 @@ export default function Navigation() {
     router.push('/login');
   };
 
-  if (!user) return null;
+  if (loading) return null; // Wacht tot de gebruiker geladen is voordat de UI wordt weergegeven
 
   return (
     <nav className={styles.nav}>
       <Link href="/">Home</Link>
       <Link href="/mijn-boeken">Mijn Boeken</Link>
       <Link href="/voortgang">Voortgang</Link>
-      {user?.user_metadata?.is_admin && (
+
+      {/* Controleer hier of de gebruiker een admin is */}
+      {user?.role === 'admin' && (
         <Link href="/admin">Admin</Link>
       )}
+
       <button onClick={handleLogout}>Uitloggen</button>
     </nav>
   );
