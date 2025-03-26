@@ -1,8 +1,8 @@
 
 .container {
-  padding: 2rem;
   max-width: 800px;
   margin: 0 auto;
+  padding: 2rem;
 }
 
 .section {
@@ -10,7 +10,7 @@
   padding: 1.5rem;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  margin-top: 2rem;
+  margin-bottom: 2rem;
 }
 
 .form {
@@ -27,14 +27,14 @@
 }
 
 .form textarea {
-  min-height: 100px;
+  min-height: 150px;
 }
 
 .form button {
-  padding: 0.75rem;
   background: #16A085;
   color: white;
   border: none;
+  padding: 0.75rem;
   border-radius: 4px;
   cursor: pointer;
 }

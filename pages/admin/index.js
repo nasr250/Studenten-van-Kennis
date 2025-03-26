@@ -4,14 +4,11 @@ import { supabase } from '../../lib/supabase';
 import { useRouter } from 'next/router';
 import styles from '../../styles/Admin.module.css';
 
-export default function AdminPage() {
+export default function AdminDashboard() {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [formData, setFormData] = useState({
-    titel: '',
-    beschrijving: '',
-    pdf_url: ''
-  });
+  const [titel, setTitel] = useState('');
+  const [beschrijving, setBeschrijving] = useState('');
+  const [pdfUrl, setPdfUrl] = useState('');
   const router = useRouter();
 
   useEffect(() => {
@@ -25,54 +22,60 @@ export default function AdminPage() {
       return;
     }
     setUser(user);
-    setLoading(false);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     const { data, error } = await supabase
       .from('boeken')
-      .insert([formData]);
-    
+      .insert([
+        {
+          titel,
+          beschrijving,
+          pdf_url: pdfUrl,
+        }
+      ]);
+
     if (error) {
-      alert('Error: ' + error.message);
-    } else {
-      alert('Boek toegevoegd!');
-      setFormData({ titel: '', beschrijving: '', pdf_url: '' });
+      alert('Er ging iets mis!');
+      return;
     }
+
+    alert('Boek succesvol toegevoegd!');
+    setTitel('');
+    setBeschrijving('');
+    setPdfUrl('');
   };
 
-  if (loading) return <p>Laden...</p>;
+  if (!user) return <p>Laden...</p>;
 
   return (
     <div className={styles.container}>
       <h1>Admin Dashboard</h1>
-      <section className={styles.section}>
+      
+      <div className={styles.section}>
         <h2>Nieuw Boek Toevoegen</h2>
         <form onSubmit={handleSubmit} className={styles.form}>
           <input
             type="text"
             placeholder="Titel"
-            value={formData.titel}
-            onChange={(e) => setFormData({...formData, titel: e.target.value})}
-            required
+            value={titel}
+            onChange={(e) => setTitel(e.target.value)}
           />
           <textarea
             placeholder="Beschrijving"
-            value={formData.beschrijving}
-            onChange={(e) => setFormData({...formData, beschrijving: e.target.value})}
-            required
+            value={beschrijving}
+            onChange={(e) => setBeschrijving(e.target.value)}
           />
           <input
             type="url"
             placeholder="PDF URL"
-            value={formData.pdf_url}
-            onChange={(e) => setFormData({...formData, pdf_url: e.target.value})}
-            required
+            value={pdfUrl}
+            onChange={(e) => setPdfUrl(e.target.value)}
           />
-          <button type="submit">Toevoegen</button>
+          <button type="submit">Boek Toevoegen</button>
         </form>
-      </section>
+      </div>
     </div>
   );
 }
