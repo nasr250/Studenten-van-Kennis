@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 
+import styles from '../styles/Home.module.css';
+
 export default function Home() {
   const [boeken, setBoeken] = useState([]);
 
@@ -14,12 +16,14 @@ export default function Home() {
   }, []);
 
   return (
-    <div>
-      <h1>Boekenoverzicht</h1>
-      <ul>
+    <div className={styles.container}>
+      <h1 className={styles.title}>Islamitische Boeken & Lesprogramma's</h1>
+      <ul className={styles.bookList}>
         {boeken.map((boek) => (
-          <li key={boek.id}>
-            <a href={`/boeken/${boek.id}`}>{boek.titel}</a>
+          <li key={boek.id} className={styles.bookCard}>
+            <a href={`/boeken/${boek.id}`} className={styles.bookLink}>
+              {boek.titel}
+            </a>
           </li>
         ))}
       </ul>
