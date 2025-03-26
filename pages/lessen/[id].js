@@ -119,6 +119,17 @@ export default function LessonPage() {
           {feedback && <p className={styles.feedback}>{feedback}</p>}
         </div>
       )}
+
+      <div className={styles.examSection}>
+        <h2>Eindtoets</h2>
+        <p>Wanneer je klaar bent met de les, kun je de eindtoets maken om je kennis te testen.</p>
+        <button 
+          onClick={() => router.push(`/toets/${id}`)} 
+          className={styles.examButton}
+        >
+          Start Eindtoets
+        </button>
+      </div>
     </div>
   );
 }
