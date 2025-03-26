@@ -12,6 +12,9 @@ export default function AdminDashboard() {
   const [lesTitel, setLesTitel] = useState(''); // State for lesson title
   const [lesBeschrijving, setLesBeschrijving] = useState(''); // State for lesson description
   const [lesContent, setLesContent] = useState(''); // State for lesson content (e.g., HTML)
+  const [videoUrl, setVideoUrl] = useState(''); // State for video URL
+  const [quizVraag, setQuizVraag] = useState(''); //State for quiz question
+  const [quizAntwoord, setQuizAntwoord] = useState(''); //State for quiz answer
   const [boekId, setBoekId] = useState(null); // State for selected book ID
   const router = useRouter();
 
@@ -67,6 +70,9 @@ export default function AdminDashboard() {
           beschrijving: lesBeschrijving,
           content: lesContent,
           boek_id: boekId,
+          video_url: videoUrl, //Added video url
+          quiz_vraag: quizVraag, //Added quiz question
+          quiz_antwoord: quizAntwoord //Added quiz answer
         }
       ]);
 
@@ -79,6 +85,10 @@ export default function AdminDashboard() {
     setLesTitel('');
     setLesBeschrijving('');
     setLesContent('');
+    setVideoUrl(''); //Clear video url field
+    setQuizVraag(''); //Clear quiz question field
+    setQuizAntwoord(''); //Clear quiz answer field
+
   };
 
   if (!user) return <p>Laden...</p>;
@@ -138,8 +148,42 @@ export default function AdminDashboard() {
             value={lesContent}
             onChange={(e) => setLesContent(e.target.value)}
           />
+          <input
+            type="text"
+            placeholder="Video URL (YouTube/Vimeo)"
+            value={videoUrl}
+            onChange={(e) => setVideoUrl(e.target.value)}
+          />
+          <div className={styles.quizSection}>
+            <h3>Quiz Toevoegen</h3>
+            <input
+              type="text"
+              placeholder="Quiz Vraag"
+              value={quizVraag}
+              onChange={(e) => setQuizVraag(e.target.value)}
+            />
+            <input
+              type="text"
+              placeholder="Correct Antwoord"
+              value={quizAntwoord}
+              onChange={(e) => setQuizAntwoord(e.target.value)}
+            />
+          </div>
           <button type="submit">Les Toevoegen</button>
         </form>
+      </div>
+
+      <div className={styles.section}>
+        <h2>Overzicht Boeken en Lessen</h2>
+        {boeken.map((boek) => (
+          <div key={boek.id} className={styles.boekOverzicht}>
+            <h3>{boek.titel}</h3>
+            <p>{boek.beschrijving}</p>
+            <a href={boek.pdf_url} target="_blank" rel="noopener noreferrer">
+              📘 PDF Bekijken
+            </a>
+          </div>
+        ))}
       </div>
     </div>
   );
