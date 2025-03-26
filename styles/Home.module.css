@@ -1,3 +1,10 @@
+/* styles.css */
+:root {
+  --primary-color: #2C3E50;
+  --secondary-color: #16A085;
+  --background-color: #fff;
+  --shadow-color: rgba(0, 0, 0, 0.1);
+}
 
 .container {
   max-width: 1200px;
@@ -6,14 +13,7 @@
   font-family: Arial, sans-serif;
 }
 
-.title {
-  color: #2C3E50;
-  text-align: center;
-  margin-bottom: 2rem;
-  font-size: 2.5rem;
-}
-
-.bookList {
+.grid {
   list-style: none;
   padding: 0;
   display: grid;
@@ -21,25 +21,46 @@
   gap: 1.5rem;
 }
 
-.bookCard {
-  background: #fff;
+.card {
+  background: var(--background-color);
   border-radius: 8px;
   padding: 1.5rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px var(--shadow-color);
   transition: transform 0.2s;
 }
 
-.bookCard:hover {
+.card:hover {
   transform: translateY(-5px);
+}
+
+
+/* home.css (or wherever the original styles were) */
+.title {
+  color: var(--primary-color);
+  text-align: center;
+  margin-bottom: 2rem;
+  font-size: 2.5rem;
+}
+
+.bookList {
+  composes: grid from global;
+}
+
+.bookCard {
+  composes: card from global;
 }
 
 .bookLink {
   text-decoration: none;
-  color: #34495E;
+  color: var(--primary-color);
   font-size: 1.2rem;
   font-weight: 500;
 }
 
 .bookLink:hover {
-  color: #16A085;
+  color: var(--secondary-color);
+}
+
+.container {
+  composes: container from global;
 }
