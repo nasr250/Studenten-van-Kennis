@@ -29,8 +29,8 @@ export default function BookPage() {
 
   return (
     <div>
-      <h1>{boek.title}</h1>
-      <p>{boek.description}</p>
+      <h1>{boek.titel}</h1>
+      <p>{boek.beschrijving}</p>
       <a href={boek.pdf_url} target="_blank">
         📘 Download PDF
       </a>
@@ -39,7 +39,7 @@ export default function BookPage() {
         <ul>
           {lessen.map((les) => (
             <li key={les.id}>
-              <a href={`/lessen/${les.id}`}>{les.title}</a>
+              <a href={`/lessen/${les.id}`}>{les.titel}</a>
             </li>
           ))}
         </ul>
