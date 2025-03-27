@@ -17,10 +17,15 @@ export default function VoortgangPage() {
   }, []);
 
   const fetchBoekenVoortgang = async (userId) => {
-    // Fetch all books
+    // Fetch all books with lessons
     const { data: boeken } = await supabase
       .from("boeken")
-      .select("*, lessen(id, titel)");
+      .select(`
+        *,
+        lessen(id, titel),
+        les_toetsen(id, les_id, vraag),
+        eind_toetsen(id, vraag)
+      `);
 
     // Fetch user's progress
     const { data: voortgang } = await supabase
@@ -30,8 +35,8 @@ export default function VoortgangPage() {
 
     // Combine books with progress
     const boekenMetVoortgang = boeken.map(boek => {
-      const boekVoortgang = voortgang?.filter(v => v.boek_id === boek.id) || [];
-      const voltooideLessen = boekVoortgang.length;
+      const boekVoortgang = voortgang?.find(v => v.boek_id === boek.id);
+      const voltooideLessen = boekVoortgang?.voltooide_lessons?.length || 0;
       const totaleLessen = boek.lessen.length;
       const percentage = totaleLessen > 0 
         ? Math.round((voltooideLessen / totaleLessen) * 100) 
@@ -41,7 +46,8 @@ export default function VoortgangPage() {
         ...boek,
         voltooideLessen,
         totaleLessen,
-        percentage
+        percentage,
+        eindtoetsVoltooid: boekVoortgang?.voltooide_eindtoets || false
       };
     });
 
@@ -65,6 +71,9 @@ export default function VoortgangPage() {
             </div>
             <p className={styles.progressText}>
               {boek.voltooideLessen} van {boek.totaleLessen} lessen voltooid ({boek.percentage}%)
+            </p>
+            <p className={styles.testStatus}>
+              Eindtoets: {boek.eindtoetsVoltooid ? '✅ Voltooid' : '⏳ Nog niet voltooid'}
             </p>
             <a href={`/boeken/${boek.id}`} className={styles.viewButton}>
               Bekijk Boek

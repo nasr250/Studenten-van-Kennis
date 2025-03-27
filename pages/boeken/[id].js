@@ -47,8 +47,24 @@ export default function BookPage() {
 
   if (!boek) return <p>Laden...</p>;
 
-  const isLesCompleted = (lesId) => {
-    return voortgang?.voltooide_lessons?.includes(lesId);
+  const getLesStatus = (lesId) => {
+    if (voortgang?.voltooide_lessons?.includes(lesId)) {
+      return 'completed';
+    } else if (voortgang?.bekeken_lessons?.includes(lesId)) {
+      return 'in-progress';
+    }
+    return 'not-started';
+  };
+
+  const getLesStatusIcon = (status) => {
+    switch (status) {
+      case 'completed':
+        return '✅';
+      case 'in-progress':
+        return '⏳';
+      default:
+        return '📖';
+    }
   };
 
   return (
@@ -68,9 +84,9 @@ export default function BookPage() {
         <ul className={styles.lessonList}>
           {lessen.map((les) => (
             <li key={les.id} className={styles.lessonItem}>
-              <a href={`/lessen/${les.id}`} className={styles.lessonLink}>
-                {les.titel}
-                {isLesCompleted(les.id) && <span className={styles.completedBadge}>✓</span>}
+              <a href={`/lessen/${les.id}`} className={`${styles.lessonLink} ${styles[getLesStatus(les.id)]}`}>
+                <span>{les.titel}</span>
+                <span className={styles.statusBadge}>{getLesStatusIcon(getLesStatus(les.id))}</span>
               </a>
             </li>
           ))}
