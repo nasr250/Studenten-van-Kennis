@@ -35,7 +35,7 @@ export default function Navigation() {
 
       {/* Controleer hier of de gebruiker een admin is */}
       {user?.role === 'admin' && (
-        <Link href="/admin">Admin</Link>
+        <Link href="/admin-dashboard">Admin Dashboard</Link>
       )}
 
       <button onClick={handleLogout}>Uitloggen</button>
