@@ -48,9 +48,13 @@ export default function BookPage() {
   if (!boek) return <p>Laden...</p>;
 
   const getLesStatus = (lesId) => {
-    if (voortgang?.voltooide_lessons?.includes(lesId)) {
+    if (!voortgang) return 'not-started';
+    const voltooide = voortgang.voltooide_lessons || [];
+    const bekeken = voortgang.bekeken_lessons || [];
+    
+    if (voltooide.includes(parseInt(lesId))) {
       return 'completed';
-    } else if (voortgang?.bekeken_lessons?.includes(lesId)) {
+    } else if (bekeken.includes(parseInt(lesId))) {
       return 'in-progress';
     }
     return 'not-started';
@@ -62,8 +66,10 @@ export default function BookPage() {
         return '✅';
       case 'in-progress':
         return '⏳';
-      default:
+      case 'not-started':
         return '📖';
+      default:
+        return '❓';
     }
   };
 
