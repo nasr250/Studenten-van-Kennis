@@ -3,9 +3,6 @@
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
   "/": "pages/index.js",
-  "/lessen/[id]": "pages/lessen/[id].js",
   "/mijn-boeken": "pages/mijn-boeken.js",
-  "/voortgang": "pages/voortgang.js",
-  "/boeken/[id]": "pages/boeken/[id].js",
-  "/login": "pages/login.js"
+  "/voortgang": "pages/voortgang.js"
 }
