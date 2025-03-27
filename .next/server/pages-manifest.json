@@ -2,6 +2,7 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
+  "/mijn-boeken": "pages/mijn-boeken.js",
   "/login": "pages/login.js",
   "/boeken/[id]": "pages/boeken/[id].js",
   "/lessen/[id]": "pages/lessen/[id].js",
