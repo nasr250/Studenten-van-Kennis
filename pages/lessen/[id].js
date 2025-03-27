@@ -199,24 +199,33 @@ export default function LessonPage() {
                   <button
                     key={index}
                     onClick={() => setAntwoord(optie)}
-                    className={`${styles.button} ${antwoord === optie ? styles.selected : ""}`}
+                    className={`${styles.button} ${antwoord === optie ? styles.correct : ""}`}
                   >
                     {optie}
                   </button>
                 ))
-              : typeof quiz.opties === 'string'
-                ? quiz.opties.split(",").map((optie, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setAntwoord(optie.trim())}
-                      className={
-                        antwoord === optie.trim() ? styles.selectedOption : ""
-                      }
-                    >
-                      {optie.trim()}
-                    </button>
-                  ))
-                : null
+              : typeof quiz.opties === "string"
+              ? quiz.opties.split(",").map((optie, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setAntwoord(optie.trim())}
+                    className={`${styles.button} ${
+                      antwoord === optie.trim() ? styles.correct : ""
+                    }`}
+                  >
+                    {optie.trim()}
+                  </button>
+                ))
+              : null
+          )}
+          {feedback && (
+            <div
+              className={`${styles.feedback} ${
+                antwoord === quiz.juiste_antwoord ? styles.correct : styles.incorrect
+              }`}
+            >
+              {feedback}
+            </div>
           )}
         </div>
       )}
