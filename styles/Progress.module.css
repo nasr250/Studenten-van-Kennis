@@ -27,3 +27,44 @@
 .progressCard p {
   margin: 0.5rem 0;
 }
+
+.title {
+  color: var(--primary-color);
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.progressBar {
+  width: 100%;
+  height: 10px;
+  background-color: #eee;
+  border-radius: 5px;
+  overflow: hidden;
+  margin: 1rem 0;
+}
+
+.progressFill {
+  height: 100%;
+  background-color: var(--primary-color);
+  transition: width 0.3s ease;
+}
+
+.progressText {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.viewButton {
+  display: inline-block;
+  background: var(--primary-color);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  text-decoration: none;
+  margin-top: 1rem;
+  transition: background-color 0.2s;
+}
+
+.viewButton:hover {
+  background: var(--secondary-color);
+}
