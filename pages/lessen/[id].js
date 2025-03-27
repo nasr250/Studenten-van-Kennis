@@ -12,20 +12,31 @@ export default function LessonPage() {
   const [antwoord, setAntwoord] = useState("");
   const [feedback, setFeedback] = useState("");
   const [user, setUser] = useState(null);
+  const [voortgang, setVoortgang] = useState(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user));
   }, []);
 
   useEffect(() => {
-    if (id) {
+    if (id && user) {
       // Haal les op
       supabase
         .from("lessen")
-        .select("*")
+        .select("*, boek:boek_id(*)")
         .eq("id", id)
         .single()
-        .then((res) => setLes(res.data));
+        .then((res) => {
+          setLes(res.data);
+          // Haal voortgang op
+          supabase
+            .from("voortgang")
+            .select("*")
+            .eq("gebruiker_id", user.id)
+            .eq("boek_id", res.data.boek_id)
+            .single()
+            .then((voortgangRes) => setVoortgang(voortgangRes.data));
+        });
 
       // Haal quiz op
       supabase
@@ -52,11 +63,29 @@ export default function LessonPage() {
 
   const saveNotitie = async () => {
     await supabase.from("notities").upsert({
-      user_id: user.id,
+      gebruiker_id: user.id,
       les_id: id,
-      content: notitie,
+      inhoud: notitie,
     });
     alert("Notitie opgeslagen!");
+  };
+
+  const markLesCompleted = async () => {
+    if (!voortgang) {
+      // Create new voortgang
+      await supabase.from("voortgang").insert({
+        gebruiker_id: user.id,
+        boek_id: les.boek_id,
+        voltooide_lessons: [id]
+      });
+    } else {
+      // Update existing voortgang
+      const voltooide = new Set([...voortgang.voltooide_lessons, id]);
+      await supabase.from("voortgang").update({
+        voltooide_lessons: Array.from(voltooide)
+      }).eq("id", voortgang.id);
+    }
+    alert("Les gemarkeerd als voltooid!");
   };
 
   const checkAntwoord = () => {
