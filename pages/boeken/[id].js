@@ -17,32 +17,48 @@ export default function BookPage() {
   }, []);
 
   useEffect(() => {
-    if (id && user) {
-      // Fetch book
-      supabase
-        .from("boeken")
-        .select("*")
-        .eq("id", id)
-        .single()
-        .then((res) => setBoek(res.data));
+    const fetchData = async () => {
+      if (!id || !user) return;
 
-      // Fetch lessons
-      supabase
-        .from("lessen")
-        .select("*")
-        .eq("boek_id", id)
-        .order("volgorde_nummer", { ascending: true })
-        .then((res) => setLessen(res.data));
+      try {
+        // Fetch book with lessons
+        const { data: bookData } = await supabase
+          .from("boeken")
+          .select("*")
+          .eq("id", id)
+          .single();
+        
+        setBoek(bookData);
 
-      // Fetch progress
-      supabase
-        .from("voortgang")
-        .select("*")
-        .eq("gebruiker_id", user.id)
-        .eq("boek_id", id)
-        .single()
-        .then((res) => setVoortgang(res.data));
-    }
+        // Fetch lessons
+        const { data: lessonData } = await supabase
+          .from("lessen")
+          .select("*")
+          .eq("boek_id", id)
+          .order("volgorde_nummer", { ascending: true });
+        
+        setLessen(lessonData || []);
+
+        // Fetch progress
+        const { data: progressData } = await supabase
+          .from("voortgang")
+          .select("*")
+          .eq("gebruiker_id", user.id)
+          .eq("boek_id", id)
+          .maybeSingle();
+
+        setVoortgang(progressData || { 
+          gebruiker_id: user.id,
+          boek_id: id,
+          voltooide_lessons: [],
+          bekeken_lessons: []
+        });
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    };
+
+    fetchData();
   }, [id, user]);
 
   if (!boek) return <p>Laden...</p>;

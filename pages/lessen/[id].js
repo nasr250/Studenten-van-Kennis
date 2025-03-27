@@ -1,4 +1,3 @@
-
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
@@ -89,17 +88,29 @@ export default function LessonPage() {
   };
 
   const saveNotitie = async () => {
-    try {
-      await supabase.from("les_notities").upsert({
-        gebruiker_id: user.id,
-        les_id: parseInt(id),
-        notitie: notitie,
-      });
-      alert("Notitie opgeslagen!");
-    } catch (error) {
-      console.error("Error saving note:", error);
-      alert("Er ging iets mis bij het opslaan van de notitie.");
+    const { data: existingNote } = await supabase
+      .from("les_notities")
+      .select("*")
+      .eq("les_id", id)
+      .eq("gebruiker_id", user.id)
+      .single();
+
+    if (existingNote) {
+      await supabase
+        .from("les_notities")
+        .update({ notitie: notitie })
+        .eq("les_id", id)
+        .eq("gebruiker_id", user.id);
+    } else {
+      await supabase
+        .from("les_notities")
+        .insert({
+          les_id: id,
+          gebruiker_id: user.id,
+          notitie: notitie
+        });
     }
+    alert("Notitie opgeslagen!");
   };
 
   const markLesCompleted = async () => {
@@ -117,7 +128,7 @@ export default function LessonPage() {
         voltooide.add(parseInt(id));
         const bekeken = new Set(voortgang.bekeken_lessons || []);
         bekeken.add(parseInt(id));
-        
+
         await supabase.from("voortgang").update({
           voltooide_lessons: Array.from(voltooide),
           bekeken_lessons: Array.from(bekeken),
@@ -132,7 +143,7 @@ export default function LessonPage() {
         .eq("gebruiker_id", user.id)
         .eq("boek_id", les.boek_id)
         .single();
-      
+
       setVoortgang(data);
       alert("Les gemarkeerd als voltooid! 🎉");
     } catch (error) {
@@ -143,7 +154,7 @@ export default function LessonPage() {
 
   const checkAntwoord = () => {
     if (!quiz) return;
-    
+
     if (antwoord.toLowerCase().trim() === quiz.correct_antwoord.toLowerCase().trim()) {
       setFeedback("Correct! 🎉");
       markLesCompleted();
@@ -237,8 +248,8 @@ export default function LessonPage() {
           className={`${styles.button} ${styles.primaryButton}`}
           disabled={voortgang?.voltooide_lessons?.includes(parseInt(id))}
         >
-          {voortgang?.voltooide_lessons?.includes(parseInt(id)) 
-            ? "Les voltooid ✓" 
+          {voortgang?.voltooide_lessons?.includes(parseInt(id))
+            ? "Les voltooid ✓"
             : "Markeer als voltooid"}
         </button>
       </div>
