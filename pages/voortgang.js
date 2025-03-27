@@ -42,10 +42,13 @@ export default function VoortgangPage() {
     const boekenMetVoortgang = boeken.map(boek => {
       const boekVoortgang = voortgang?.find(v => v.boek_id === boek.id);
       const voltooideLessen = boekVoortgang?.voltooide_lessons?.length || 0;
-      const totaleLessen = boek.lessen.length;
+      const bekekenLessen = boekVoortgang?.bekeken_lessons?.length || 0;
+      const totaleLessen = boek.lessen?.length || 0;
       const percentage = totaleLessen > 0 
         ? Math.round((voltooideLessen / totaleLessen) * 100) 
         : 0;
+      const voortgangStatus = totaleLessen === voltooideLessen ? 'Voltooid' :
+        bekekenLessen > 0 ? 'In progress' : 'Nog niet gestart';
 
       return {
         ...boek,

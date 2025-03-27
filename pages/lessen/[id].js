@@ -70,22 +70,60 @@ export default function LessonPage() {
     alert("Notitie opgeslagen!");
   };
 
+  useEffect(() => {
+    // Mark lesson as viewed when opened
+    const markLesViewed = async () => {
+      if (user && les) {
+        const bekeken = new Set(voortgang?.bekeken_lessons || []);
+        bekeken.add(parseInt(id));
+        
+        if (!voortgang) {
+          await supabase.from("voortgang").insert({
+            gebruiker_id: user.id,
+            boek_id: les.boek_id,
+            bekeken_lessons: Array.from(bekeken)
+          });
+        } else {
+          await supabase.from("voortgang").update({
+            bekeken_lessons: Array.from(bekeken),
+            laatste_activiteit: new Date().toISOString()
+          }).eq("id", voortgang.id);
+        }
+      }
+    };
+    markLesViewed();
+  }, [user, les, id]);
+
   const markLesCompleted = async () => {
     if (!voortgang) {
-      // Create new voortgang
       await supabase.from("voortgang").insert({
         gebruiker_id: user.id,
         boek_id: les.boek_id,
-        voltooide_lessons: [id]
+        voltooide_lessons: [parseInt(id)],
+        bekeken_lessons: [parseInt(id)],
+        laatste_activiteit: new Date().toISOString()
       });
     } else {
-      // Update existing voortgang
-      const voltooide = new Set([...voortgang.voltooide_lessons, id]);
+      const voltooide = new Set(voortgang.voltooide_lessons || []);
+      voltooide.add(parseInt(id));
+      const bekeken = new Set(voortgang.bekeken_lessons || []);
+      bekeken.add(parseInt(id));
+      
       await supabase.from("voortgang").update({
-        voltooide_lessons: Array.from(voltooide)
+        voltooide_lessons: Array.from(voltooide),
+        bekeken_lessons: Array.from(bekeken),
+        laatste_activiteit: new Date().toISOString()
       }).eq("id", voortgang.id);
     }
     alert("Les gemarkeerd als voltooid!");
+    // Refresh voortgang
+    const { data } = await supabase
+      .from("voortgang")
+      .select("*")
+      .eq("gebruiker_id", user.id)
+      .eq("boek_id", les.boek_id)
+      .single();
+    setVoortgang(data);
   };
 
   const checkAntwoord = () => {
