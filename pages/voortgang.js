@@ -18,7 +18,7 @@ export default function VoortgangPage() {
 
   const fetchBoekenVoortgang = async (userId) => {
     // Fetch all books with lessons
-    const { data: boeken } = await supabase
+    const { data: boeken, error } = await supabase
       .from("boeken")
       .select(`
         *,
@@ -26,6 +26,11 @@ export default function VoortgangPage() {
         les_toetsen(id, les_id, vraag),
         eind_toetsen(id, vraag)
       `);
+
+    if (error || !boeken) {
+      console.error("Error fetching books:", error);
+      return;
+    }
 
     // Fetch user's progress
     const { data: voortgang } = await supabase
