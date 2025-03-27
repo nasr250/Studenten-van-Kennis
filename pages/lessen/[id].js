@@ -193,27 +193,31 @@ export default function LessonPage() {
         <div className={styles.quizSection}>
           <h2>Toets</h2>
           <p>{quiz.vraag}</p>
-          {quiz.opties?.includes("[")
-            ? JSON.parse(quiz.opties).map((optie, index) => (
-                <button
-                  key={index}
-                  onClick={() => setAntwoord(optie)}
-                  className={antwoord === optie ? styles.selectedOption : ""}
-                >
-                  {optie}
-                </button>
-              ))
-            : quiz.opties?.split(",").map((optie, index) => (
-                <button
-                  key={index}
-                  onClick={() => setAntwoord(optie.trim())}
-                  className={
-                    antwoord === optie.trim() ? styles.selectedOption : ""
-                  }
-                >
-                  {optie.trim()}
-                </button>
-              ))}
+          {quiz.opties && (
+            quiz.opties.includes("[")
+              ? JSON.parse(quiz.opties).map((optie, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setAntwoord(optie)}
+                    className={antwoord === optie ? styles.selectedOption : ""}
+                  >
+                    {optie}
+                  </button>
+                ))
+              : typeof quiz.opties === 'string'
+                ? quiz.opties.split(",").map((optie, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setAntwoord(optie.trim())}
+                      className={
+                        antwoord === optie.trim() ? styles.selectedOption : ""
+                      }
+                    >
+                      {optie.trim()}
+                    </button>
+                  ))
+                : null
+          )}
         </div>
       )}
 
