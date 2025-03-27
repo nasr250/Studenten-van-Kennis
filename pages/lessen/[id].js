@@ -197,7 +197,7 @@ export default function LessonPage() {
         <div className={styles.quizSection}>
           <h2>Toets</h2>
           <p>{quiz.vraag}</p>
-          {JSON.parse(quiz.opties || '[]').map((optie, index) => (
+          {Array.isArray(JSON.parse(quiz.opties || '[]')) ? JSON.parse(quiz.opties || '[]').map((optie, index) => (
             <button
               key={index}
               onClick={() => setAntwoord(optie)}
@@ -205,7 +205,16 @@ export default function LessonPage() {
             >
               {optie}
             </button>
-          ))}
+          )) :  // Handle cases where opties is not a valid JSON array.  This assumes a comma-separated string.
+                quiz.opties.split(',').map((optie, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setAntwoord(optie.trim())}
+                      className={antwoord === optie.trim() ? styles.selectedOption : ''}
+                    >
+                      {optie.trim()}
+                    </button>
+                  ))}
         </div>
       )}
 
