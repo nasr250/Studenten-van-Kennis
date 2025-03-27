@@ -67,8 +67,16 @@ export default function LessonPage() {
         setVoortgang(voortgangData);
 
         // Update bekeken_lessons if not already viewed
-        if (voortgangData) {
-          const bekeken = voortgangData.bekeken_lessons || [];
+        // Zoek bestaande voortgang voor dit boek
+        const { data: existingVoortgang } = await supabase
+          .from("voortgang")
+          .select("*")
+          .eq("gebruiker_id", user.id)
+          .eq("boek_id", lesData.boek_id)
+          .single();
+
+        if (existingVoortgang) {
+          const bekeken = existingVoortgang.bekeken_lessons || [];
           if (!bekeken.includes(id)) {
             const updatedBekeken = [...bekeken, id];
             await supabase
@@ -77,10 +85,10 @@ export default function LessonPage() {
                 bekeken_lessons: updatedBekeken,
                 laatste_activiteit: new Date().toISOString(),
               })
-              .eq("id", voortgangData.id);
+              .eq("id", existingVoortgang.id);
           }
         } else {
-          // Create new progress entry
+          // Als er nog geen voortgang is voor dit boek, maak dan één record aan
           await supabase.from("voortgang").insert({
             gebruiker_id: user.id,
             boek_id: lesData.boek_id,
