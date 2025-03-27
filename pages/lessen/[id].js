@@ -168,7 +168,7 @@ export default function LessonPage() {
   if (!les) return <div>Les niet gevonden</div>;
 
   return (
-    <div className={styles.lessonContainer}>
+    <div className={styles.container}>
       <h1>{les.titel}</h1>
       {les.les_url && (
         <iframe
@@ -192,14 +192,14 @@ export default function LessonPage() {
       {quiz && (
         <div className={styles.quizSection}>
           <h2>Toets</h2>
-          <p>{quiz.vraag}</p>
+          <p className={styles.question}>{quiz.vraag}</p>
           {quiz.opties && (
             quiz.opties.includes("[")
               ? JSON.parse(quiz.opties).map((optie, index) => (
                   <button
                     key={index}
                     onClick={() => setAntwoord(optie)}
-                    className={antwoord === optie ? styles.selectedOption : ""}
+                    className={`${styles.button} ${antwoord === optie ? styles.selected : ""}`}
                   >
                     {optie}
                   </button>
