@@ -50,12 +50,12 @@ export default function LessonPage() {
       if (user) {
         supabase
           .from("notities")
-          .select("content")
+          .select("inhoud")
           .eq("les_id", id)
-          .eq("user_id", user.id)
+          .eq("gebruiker_id", user.id)
           .single()
           .then((res) => {
-            if (res.data) setNotitie(res.data.content);
+            if (res.data) setNotitie(res.data.inhoud);
           });
       }
     }
