@@ -20,16 +20,6 @@ globalThis.__BUILD_MANIFEST = {
       "static/chunks/main.js",
       "static/chunks/pages/_error.js"
     ],
-    "/boeken/[id]": [
-      "static/chunks/webpack.js",
-      "static/chunks/main.js",
-      "static/chunks/pages/boeken/[id].js"
-    ],
-    "/lessen/[id]": [
-      "static/chunks/webpack.js",
-      "static/chunks/main.js",
-      "static/chunks/pages/lessen/[id].js"
-    ],
     "/login": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
@@ -39,11 +29,6 @@ globalThis.__BUILD_MANIFEST = {
       "static/chunks/webpack.js",
       "static/chunks/main.js",
       "static/chunks/pages/mijn-boeken.js"
-    ],
-    "/voortgang": [
-      "static/chunks/webpack.js",
-      "static/chunks/main.js",
-      "static/chunks/pages/voortgang.js"
     ]
   },
   "ampFirstPages": []
