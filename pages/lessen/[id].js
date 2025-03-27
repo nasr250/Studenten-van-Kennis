@@ -73,9 +73,9 @@ export default function LessonPage() {
             const updatedBekeken = [...bekeken, id];
             await supabase
               .from("voortgang")
-              .update({ 
+              .update({
                 bekeken_lessons: updatedBekeken,
-                laatste_activiteit: new Date().toISOString()
+                laatste_activiteit: new Date().toISOString(),
               })
               .eq("id", voortgangData.id);
           }
@@ -86,7 +86,7 @@ export default function LessonPage() {
             boek_id: lesData.boek_id,
             bekeken_lessons: [id],
             voltooide_lessons: [],
-            laatste_activiteit: new Date().toISOString()
+            laatste_activiteit: new Date().toISOString(),
           });
         }
       } catch (error) {
@@ -107,24 +107,22 @@ export default function LessonPage() {
         // Update existing note
         const { error } = await supabase
           .from("les_notities")
-          .update({ 
+          .update({
             notitie,
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
           })
           .eq("id", bestaandeNotitie.id);
 
         if (error) throw error;
       } else {
         // Create new note
-        const { error } = await supabase
-          .from("les_notities")
-          .insert({
-            gebruiker_id: user.id,
-            les_id: id,
-            notitie,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          });
+        const { error } = await supabase.from("les_notities").insert({
+          gebruiker_id: user.id,
+          les_id: id,
+          notitie,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
 
         if (error) throw error;
       }
@@ -146,15 +144,15 @@ export default function LessonPage() {
         const updatedVoltooide = [...voltooide, id];
         await supabase
           .from("voortgang")
-          .update({ 
+          .update({
             voltooide_lessons: updatedVoltooide,
-            laatste_activiteit: new Date().toISOString()
+            laatste_activiteit: new Date().toISOString(),
           })
           .eq("id", voortgang.id);
 
         setVoortgang({
           ...voortgang,
-          voltooide_lessons: updatedVoltooide
+          voltooide_lessons: updatedVoltooide,
         });
 
         setFeedback("Les gemarkeerd als voltooid!");
@@ -173,8 +171,8 @@ export default function LessonPage() {
     <div className={styles.lessonContainer}>
       <h1>{les.titel}</h1>
       {les.les_url && (
-        <iframe 
-          src={les.les_url} 
+        <iframe
+          src={les.les_url}
           className={styles.lessonFrame}
           title={les.titel}
         />
@@ -188,51 +186,48 @@ export default function LessonPage() {
           placeholder="Schrijf hier je notities..."
           className={styles.notesInput}
         />
-        <button onClick={handleNotitieSubmit}>
-          Notities Opslaan
-        </button>
+        <button onClick={handleNotitieSubmit}>Notities Opslaan</button>
       </div>
 
       {quiz && (
         <div className={styles.quizSection}>
           <h2>Toets</h2>
           <p>{quiz.vraag}</p>
-          {Array.isArray(JSON.parse(quiz.opties || '[]')) ? JSON.parse(quiz.opties || '[]').map((optie, index) => (
-            <button
-              key={index}
-              onClick={() => setAntwoord(optie)}
-              className={antwoord === optie ? styles.selectedOption : ''}
-            >
-              {optie}
-            </button>
-          )) :  // Handle cases where opties is not a valid JSON array.  This assumes a comma-separated string.
-                quiz.opties.split(',').map((optie, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setAntwoord(optie.trim())}
-                      className={antwoord === optie.trim() ? styles.selectedOption : ''}
-                    >
-                      {optie.trim()}
-                    </button>
-                  ))}
+          {quiz.opties?.includes("[")
+            ? JSON.parse(quiz.opties).map((optie, index) => (
+                <button
+                  key={index}
+                  onClick={() => setAntwoord(optie)}
+                  className={antwoord === optie ? styles.selectedOption : ""}
+                >
+                  {optie}
+                </button>
+              ))
+            : quiz.opties?.split(",").map((optie, index) => (
+                <button
+                  key={index}
+                  onClick={() => setAntwoord(optie.trim())}
+                  className={
+                    antwoord === optie.trim() ? styles.selectedOption : ""
+                  }
+                >
+                  {optie.trim()}
+                </button>
+              ))}
         </div>
       )}
 
-      <button 
+      <button
         onClick={markLessonComplete}
         className={styles.completeButton}
         disabled={voortgang?.voltooide_lessons?.includes(id)}
       >
-        {voortgang?.voltooide_lessons?.includes(id) 
-          ? "Les Voltooid" 
+        {voortgang?.voltooide_lessons?.includes(id)
+          ? "Les Voltooid"
           : "Markeer als Voltooid"}
       </button>
 
-      {feedback && (
-        <div className={styles.feedback}>
-          {feedback}
-        </div>
-      )}
+      {feedback && <div className={styles.feedback}>{feedback}</div>}
     </div>
   );
 }
