@@ -8,6 +8,7 @@ export default function LessonPage() {
   const { id } = router.query;
   const [les, setLes] = useState(null);
   const [notitie, setNotitie] = useState("");
+  const [bestaandeNotitie, setBestaandeNotitie] = useState(null);
   const [quiz, setQuiz] = useState(null);
   const [antwoord, setAntwoord] = useState("");
   const [feedback, setFeedback] = useState("");
@@ -43,19 +44,51 @@ export default function LessonPage() {
           .eq("boek_id", lesData.boek_id)
           .single();
 
-        setVoortgang(voortgangData);
-
-        // Fetch quiz
-        const { data: quizData } = await supabase
-          .from("les_toetsen")
+        // Fetch existing note
+        const { data: notitieData } = await supabase
+          .from("les_notities")
           .select("*")
+          .eq("gebruiker_id", user.id)
           .eq("les_id", id)
           .single();
 
-        setQuiz(quizData);
+        if (notitieData) {
+          setBestaandeNotitie(notitieData);
+          setNotitie(notitieData.notitie);
+        }
 
-        // Mark lesson as viewed
-        await markLesViewed(lesData.boek_id);
+        // Fetch quiz questions
+        const { data: quizData } = await supabase
+          .from("les_toetsen")
+          .select("*")
+          .eq("les_id", id);
+
+        setQuiz(quizData?.[0] || null);
+        setVoortgang(voortgangData);
+
+        // Update bekeken_lessons if not already viewed
+        if (voortgangData) {
+          const bekeken = voortgangData.bekeken_lessons || [];
+          if (!bekeken.includes(id)) {
+            const updatedBekeken = [...bekeken, id];
+            await supabase
+              .from("voortgang")
+              .update({ 
+                bekeken_lessons: updatedBekeken,
+                laatste_activiteit: new Date().toISOString()
+              })
+              .eq("id", voortgangData.id);
+          }
+        } else {
+          // Create new progress entry
+          await supabase.from("voortgang").insert({
+            gebruiker_id: user.id,
+            boek_id: lesData.boek_id,
+            bekeken_lessons: [id],
+            voltooide_lessons: [],
+            laatste_activiteit: new Date().toISOString()
+          });
+        }
       } catch (error) {
         console.error("Error fetching lesson data:", error);
       } finally {
@@ -66,193 +99,131 @@ export default function LessonPage() {
     fetchLessonData();
   }, [id, user]);
 
-  const markLesViewed = async (boekId) => {
-    if (!user) return;
+  const handleNotitieSubmit = async () => {
+    if (!user || !id) return;
 
-    const bekeken = new Set(voortgang?.bekeken_lessons || []);
-    bekeken.add(parseInt(id));
-
-    if (!voortgang) {
-      await supabase.from("voortgang").insert({
-        gebruiker_id: user.id,
-        boek_id: boekId,
-        bekeken_lessons: Array.from(bekeken),
-        laatste_activiteit: new Date().toISOString()
-      });
-    } else {
-      await supabase.from("voortgang").update({
-        bekeken_lessons: Array.from(bekeken),
-        laatste_activiteit: new Date().toISOString()
-      }).eq("id", voortgang.id);
-    }
-  };
-
-  const saveNotitie = async () => {
-    const { data: existingNote } = await supabase
-      .from("les_notities")
-      .select("*")
-      .eq("les_id", id)
-      .eq("gebruiker_id", user.id)
-      .single();
-
-    if (existingNote) {
-      await supabase
-        .from("les_notities")
-        .update({ notitie: notitie })
-        .eq("les_id", id)
-        .eq("gebruiker_id", user.id);
-    } else {
-      await supabase
-        .from("les_notities")
-        .insert({
-          les_id: id,
-          gebruiker_id: user.id,
-          notitie: notitie
-        });
-    }
-    alert("Notitie opgeslagen!");
-  };
-
-  const markLesCompleted = async () => {
     try {
-      if (!voortgang) {
-        await supabase.from("voortgang").insert({
-          gebruiker_id: user.id,
-          boek_id: les.boek_id,
-          voltooide_lessons: [parseInt(id)],
-          bekeken_lessons: [parseInt(id)],
-          laatste_activiteit: new Date().toISOString()
-        });
-      } else {
-        const voltooide = new Set(voortgang.voltooide_lessons || []);
-        voltooide.add(parseInt(id));
-        const bekeken = new Set(voortgang.bekeken_lessons || []);
-        bekeken.add(parseInt(id));
+      if (bestaandeNotitie) {
+        // Update existing note
+        const { error } = await supabase
+          .from("les_notities")
+          .update({ 
+            notitie,
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", bestaandeNotitie.id);
 
-        await supabase.from("voortgang").update({
-          voltooide_lessons: Array.from(voltooide),
-          bekeken_lessons: Array.from(bekeken),
-          laatste_activiteit: new Date().toISOString()
-        }).eq("id", voortgang.id);
+        if (error) throw error;
+      } else {
+        // Create new note
+        const { error } = await supabase
+          .from("les_notities")
+          .insert({
+            gebruiker_id: user.id,
+            les_id: id,
+            notitie,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
+
+        if (error) throw error;
       }
 
-      // Refresh voortgang
-      const { data } = await supabase
-        .from("voortgang")
-        .select("*")
-        .eq("gebruiker_id", user.id)
-        .eq("boek_id", les.boek_id)
-        .single();
-
-      setVoortgang(data);
-      alert("Les gemarkeerd als voltooid! 🎉");
+      setFeedback("Notitie opgeslagen!");
+      setTimeout(() => setFeedback(""), 3000);
     } catch (error) {
-      console.error("Error marking lesson as complete:", error);
-      alert("Er ging iets mis bij het markeren van de les als voltooid.");
+      console.error("Error saving note:", error);
+      setFeedback("Er ging iets mis bij het opslaan.");
     }
   };
 
-  const checkAntwoord = () => {
-    if (!quiz) return;
+  const markLessonComplete = async () => {
+    if (!voortgang || !user || !les) return;
 
-    if (antwoord.toLowerCase().trim() === quiz.correct_antwoord.toLowerCase().trim()) {
-      setFeedback("Correct! 🎉");
-      markLesCompleted();
-    } else {
-      setFeedback("Helaas, probeer het nog eens.");
+    try {
+      const voltooide = voortgang.voltooide_lessons || [];
+      if (!voltooide.includes(id)) {
+        const updatedVoltooide = [...voltooide, id];
+        await supabase
+          .from("voortgang")
+          .update({ 
+            voltooide_lessons: updatedVoltooide,
+            laatste_activiteit: new Date().toISOString()
+          })
+          .eq("id", voortgang.id);
+
+        setVoortgang({
+          ...voortgang,
+          voltooide_lessons: updatedVoltooide
+        });
+
+        setFeedback("Les gemarkeerd als voltooid!");
+        setTimeout(() => setFeedback(""), 3000);
+      }
+    } catch (error) {
+      console.error("Error marking lesson complete:", error);
+      setFeedback("Er ging iets mis bij het voltooien van de les.");
     }
   };
 
-  if (isLoading) return (
-    <div className={styles.loadingContainer}>
-      <div className={styles.loadingSpinner}></div>
-      <p>Laden...</p>
-    </div>
-  );
-
-  if (!les) return (
-    <div className={styles.errorContainer}>
-      <p>Les niet gevonden</p>
-      <button onClick={() => router.back()} className={styles.button}>
-        Ga terug
-      </button>
-    </div>
-  );
+  if (isLoading) return <div>Laden...</div>;
+  if (!les) return <div>Les niet gevonden</div>;
 
   return (
-    <div className={styles.container}>
-      <header className={styles.header}>
-        <h1>{les.titel}</h1>
-        <p className={styles.bookInfo}>
-          Uit het boek: {les.boek.titel}
-        </p>
-      </header>
-
-      {les.video_url && (
-        <div className={styles.videoContainer}>
-          <iframe
-            src={les.video_url}
-            frameBorder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-          ></iframe>
-        </div>
+    <div className={styles.lessonContainer}>
+      <h1>{les.titel}</h1>
+      {les.les_url && (
+        <iframe 
+          src={les.les_url} 
+          className={styles.lessonFrame}
+          title={les.titel}
+        />
       )}
 
-      <div className={styles.contentSection}>
-        <h2>Lesinhoud</h2>
-        <div dangerouslySetInnerHTML={{ __html: les.content }}></div>
-      </div>
-
       <div className={styles.notesSection}>
-        <h2>Aantekeningen</h2>
+        <h2>Notities</h2>
         <textarea
-          className={styles.notesInput}
           value={notitie}
           onChange={(e) => setNotitie(e.target.value)}
-          placeholder="Schrijf hier je aantekeningen..."
-        ></textarea>
-        <button onClick={saveNotitie} className={styles.button}>
-          Opslaan
+          placeholder="Schrijf hier je notities..."
+          className={styles.notesInput}
+        />
+        <button onClick={handleNotitieSubmit}>
+          Notities Opslaan
         </button>
       </div>
 
       {quiz && (
         <div className={styles.quizSection}>
           <h2>Toets</h2>
-          <p className={styles.question}>{quiz.vraag}</p>
-          <input
-            type="text"
-            className={styles.quizInput}
-            value={antwoord}
-            onChange={(e) => setAntwoord(e.target.value)}
-            placeholder="Jouw antwoord..."
-          />
-          <button onClick={checkAntwoord} className={styles.button}>
-            Controleer
-          </button>
-          {feedback && (
-            <div className={`${styles.feedback} ${feedback.includes("Correct") ? styles.correct : styles.incorrect}`}>
-              {feedback}
-            </div>
-          )}
+          <p>{quiz.vraag}</p>
+          {JSON.parse(quiz.opties || '[]').map((optie, index) => (
+            <button
+              key={index}
+              onClick={() => setAntwoord(optie)}
+              className={antwoord === optie ? styles.selectedOption : ''}
+            >
+              {optie}
+            </button>
+          ))}
         </div>
       )}
 
-      <div className={styles.navigationButtons}>
-        <button onClick={() => router.back()} className={`${styles.button} ${styles.secondaryButton}`}>
-          Terug naar overzicht
-        </button>
-        <button
-          onClick={markLesCompleted}
-          className={`${styles.button} ${styles.primaryButton}`}
-          disabled={voortgang?.voltooide_lessons?.includes(parseInt(id))}
-        >
-          {voortgang?.voltooide_lessons?.includes(parseInt(id))
-            ? "Les voltooid ✓"
-            : "Markeer als voltooid"}
-        </button>
-      </div>
+      <button 
+        onClick={markLessonComplete}
+        className={styles.completeButton}
+        disabled={voortgang?.voltooide_lessons?.includes(id)}
+      >
+        {voortgang?.voltooide_lessons?.includes(id) 
+          ? "Les Voltooid" 
+          : "Markeer als Voltooid"}
+      </button>
+
+      {feedback && (
+        <div className={styles.feedback}>
+          {feedback}
+        </div>
+      )}
     </div>
   );
 }

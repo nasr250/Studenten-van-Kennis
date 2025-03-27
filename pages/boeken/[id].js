@@ -65,12 +65,16 @@ export default function BookPage() {
 
   const getLesStatus = (lesId) => {
     if (!voortgang) return 'not-started';
-    const voltooide = voortgang.voltooide_lessons || [];
-    const bekeken = voortgang.bekeken_lessons || [];
+    const voltooide = Array.isArray(voortgang.voltooide_lessons) 
+      ? voortgang.voltooide_lessons 
+      : [];
+    const bekeken = Array.isArray(voortgang.bekeken_lessons)
+      ? voortgang.bekeken_lessons
+      : [];
     
-    if (voltooide.includes(parseInt(lesId))) {
+    if (voltooide.includes(lesId)) {
       return 'completed';
-    } else if (bekeken.includes(parseInt(lesId))) {
+    } else if (bekeken.includes(lesId)) {
       return 'in-progress';
     }
     return 'not-started';
