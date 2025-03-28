@@ -1,16 +1,26 @@
 
 .nav {
   background: white;
-  padding: 1rem 2rem;
+  padding: 1rem;
   display: flex;
-  gap: 1rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  align-items: center;
+}
+
+@media (max-width: 768px) {
+  .nav {
+    justify-content: center;
+    text-align: center;
+  }
 }
 
 .nav a {
   color: #333;
   text-decoration: none;
   padding: 0.5rem 1rem;
+  font-size: 1rem;
 }
 
 .nav a:hover {
@@ -25,6 +35,14 @@
   padding: 0.5rem 1rem;
   border-radius: 4px;
   cursor: pointer;
+  font-size: 1rem;
+}
+
+@media (max-width: 768px) {
+  .nav button {
+    margin: 0.5rem auto;
+    width: 100%;
+  }
 }
 
 .nav button:hover {
