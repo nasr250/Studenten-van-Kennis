@@ -126,7 +126,6 @@ export default function BookEditPage() {
         if (!data.tracks) {
           throw new Error("Geen tracks gevonden in playlist");
         }
-        console.log(data);
         const newLessons = data.tracks.map((track, index) => ({
           id: `temp_${Date.now()}_${index}`, // Add a unique temporary ID
           titel: track.title,
