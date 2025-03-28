@@ -193,9 +193,13 @@ export default function LessonPage() {
       <div className={styles.videoContainer}>
         {les.les_url && (
           <iframe
-            src={les.les_url}
+            src={les.les_url.includes('soundcloud.com') ? 
+              `https://w.soundcloud.com/player/?url=${encodeURIComponent(les.les_url)}&color=%23ff5500&auto_play=false&hide_related=true&show_comments=false&show_user=true&show_reposts=false&show_teaser=false&visual=true` : 
+              les.les_url}
             className={styles.lessonFrame}
             title={les.titel}
+            scrolling="no"
+            allow="autoplay"
           />
         )}
       </div>
