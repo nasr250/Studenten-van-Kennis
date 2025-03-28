@@ -79,23 +79,28 @@ export default function BookEdit() {
     }
   
 
-  async function fetchPlaylistData(playlistUrl) {
-    const clientId = "YOUR_CLIENT_ID"; // Replace with your SoundCloud client ID
-    const resolveUrl = `https://api.soundcloud.com/resolve?url=${playlistUrl}&client_id=${clientId}`;
-
-    const resolveResponse = await fetch(resolveUrl);
-    const resolveData = await resolveResponse.json();
-
-    if (resolveData.kind === "playlist") {
-      const playlistId = resolveData.id;
-      const playlistInfoUrl = `https://api-v2.soundcloud.com/playlists/${playlistId}?client_id=${clientId}`;
-
-      const playlistResponse = await fetch(playlistInfoUrl);
-      const playlistData = await playlistResponse.json();
-
-      return playlistData.tracks;
-    } else {
-      throw new Error("Geen geldige playlist URL");
+  async function fetchPlaylistData(url) {
+    try {
+      const { data: html } = await axios.get(url);
+      const $ = cheerio.load(html);
+      const pageDataScript = $('script:contains("window.__sc_hydration")').html();
+      const matches = pageDataScript.match(/window\.__sc_hydration = (.*);/);
+      
+      if (matches && matches[1]) {
+        const scData = JSON.parse(matches[1]);
+        const tracks = scData.find((item) => item.hydration?.data?.tracks)?.hydration?.data?.tracks;
+        
+        if (!tracks) throw new Error("Geen tracks gevonden in playlist");
+        
+        return tracks.map(track => ({
+          title: track.title,
+          permalink_url: track.permalink_url
+        }));
+      }
+      throw new Error("Geen playlist data gevonden");
+    } catch (error) {
+      console.error("Error scraping playlist:", error);
+      throw new Error("Kon playlist niet laden");
     }
   }
 
