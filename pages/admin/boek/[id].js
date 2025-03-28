@@ -1,28 +1,39 @@
-
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "../../../lib/supabase";
-import { TextField, Button, Box } from '@mui/material';
+import { TextField, Button, Box } from "@mui/material";
 import styles from "../../../styles/Admin.module.css";
 
 export default function BookEdit() {
   const router = useRouter();
   const { id } = router.query;
-  const isNew = id === 'new';
+  const isNew = id === "new";
 
   const [formData, setFormData] = useState({
-    titel: '',
-    beschrijving: '',
-    categorie: '',
-    pdf_url: '',
-    volgorde_nummer: ''
+    titel: "",
+    beschrijving: "",
+    categorie_id: "",
+    pdf_url: "",
+    volgorde_nummer: "",
   });
+  const [categories, setCategories] = useState([]);
 
   useEffect(() => {
+    loadCategories();
     if (!isNew && id) {
       loadBoek();
     }
   }, [id]);
+
+  const loadCategories = async () => {
+    const { data, error } = await supabase.from("categorieen").select("*");
+    if (data) {
+      setCategories(data);
+    }
+    if (error) {
+      console.error("Error loading categories:", error);
+    }
+  };
 
   const loadBoek = async () => {
     const { data } = await supabase
@@ -30,7 +41,7 @@ export default function BookEdit() {
       .select("*")
       .eq("id", id)
       .single();
-    
+
     if (data) {
       setFormData(data);
     }
@@ -38,29 +49,31 @@ export default function BookEdit() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (isNew) {
-      await supabase.from("boeken").insert([formData]);
+      const { error } = await supabase.from("boeken").insert(formData);
+      if (error) console.error("Error adding book:", error);
     } else {
-      await supabase
+      const { error } = await supabase
         .from("boeken")
         .update(formData)
         .eq("id", id);
+      if (error) console.error("Error updating book:", error);
     }
-    
+
     router.push("/admin-dashboard");
   };
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     });
   };
 
   return (
     <div className={styles.container}>
-      <h1>{isNew ? 'Nieuw Boek' : 'Boek Bewerken'}</h1>
+      <h1>{isNew ? "Nieuw Boek" : "Boek Bewerken"}</h1>
       <Box component="form" onSubmit={handleSubmit} className={styles.form}>
         <TextField
           fullWidth
@@ -69,6 +82,7 @@ export default function BookEdit() {
           value={formData.titel}
           onChange={handleChange}
           margin="normal"
+          required
         />
         <TextField
           fullWidth
@@ -80,14 +94,22 @@ export default function BookEdit() {
           multiline
           rows={4}
         />
-        <TextField
-          fullWidth
-          label="Categorie"
-          name="categorie"
-          value={formData.categorie}
+        <select
+          name="categorie_id"
+          value={formData.categorie_id}
           onChange={handleChange}
-          margin="normal"
-        />
+          className={styles.select}
+          required
+        >
+          <option value="" disabled>
+            Kies een categorie
+          </option>
+          {categories.map((category) => (
+            <option key={category.id} value={category.id}>
+              {category.naam}
+            </option>
+          ))}
+        </select>
         <TextField
           fullWidth
           label="PDF URL"
@@ -104,6 +126,7 @@ export default function BookEdit() {
           value={formData.volgorde_nummer}
           onChange={handleChange}
           margin="normal"
+          required
         />
         <Button
           type="submit"
@@ -111,7 +134,7 @@ export default function BookEdit() {
           color="primary"
           className={styles.submitButton}
         >
-          {isNew ? 'Toevoegen' : 'Opslaan'}
+          {isNew ? "Toevoegen" : "Opslaan"}
         </Button>
       </Box>
     </div>
