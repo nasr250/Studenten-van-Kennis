@@ -10,6 +10,53 @@ export default function BookEdit() {
   const { id } = router.query;
   const isNew = id === "new";
   const [lessen, setLessen] = useState([]);
+  const [playlistUrl, setPlaylistUrl] = useState("");
+
+  const handleProcessPlaylist = async () => {
+    if (!playlistUrl) return;
+
+    try {
+      // Extract video IDs from playlist URL
+      let playlistId = "";
+      if (playlistUrl.includes("youtube.com") || playlistUrl.includes("youtu.be")) {
+        playlistId = playlistUrl.match(/[?&]list=([^&]+)/)?.[1];
+        if (!playlistId) {
+          alert("Ongeldige YouTube playlist URL");
+          return;
+        }
+        
+        // Fetch playlist data from YouTube API
+        const response = await fetch(`https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=50&playlistId=${playlistId}&key=${process.env.NEXT_PUBLIC_YOUTUBE_API_KEY}`);
+        const data = await response.json();
+        
+        // Create lessons from playlist items
+        const newLessons = data.items.map((item, index) => ({
+          titel: item.snippet.title,
+          les_url: `https://www.youtube.com/embed/${item.snippet.resourceId.videoId}`,
+          volgorde_nummer: index + 1,
+          boek_id: id
+        }));
+
+        // Insert all lessons into database
+        const { error } = await supabase
+          .from("lessen")
+          .insert(newLessons);
+
+        if (error) throw error;
+        
+        // Update local state
+        setLessen(prev => [...prev, ...newLessons]);
+        alert("Lessen succesvol aangemaakt van playlist!");
+      } else if (playlistUrl.includes("soundcloud.com")) {
+        alert("SoundCloud playlist verwerking komt binnenkort!");
+      } else {
+        alert("Voer een geldige YouTube of SoundCloud playlist URL in");
+      }
+    } catch (error) {
+      console.error("Error processing playlist:", error);
+      alert("Er is een fout opgetreden bij het verwerken van de playlist");
+    }
+  };
   const [newLesson, setNewLesson] = useState({
     titel: "",
     les_url: "",
@@ -192,6 +239,25 @@ export default function BookEdit() {
         </Button>
       </Box>
       
+      <Box sx={{ mt: 4, mb: 2 }}>
+        <h3>Playlist Toevoegen</h3>
+        <TextField
+          fullWidth
+          label="Playlist URL (YouTube/SoundCloud)"
+          variant="outlined"
+          sx={{ mb: 2 }}
+          onChange={(e) => setPlaylistUrl(e.target.value)}
+        />
+        <Button 
+          variant="contained" 
+          color="secondary"
+          onClick={handleProcessPlaylist}
+          sx={{ mr: 2 }}
+        >
+          Playlist Verwerken
+        </Button>
+      </Box>
+
       <Box component="form">
         <input
           type="text"
