@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useRouter } from "next/router";
@@ -7,7 +6,7 @@ import styles from "../styles/Admin.module.css";
 export default function AdminDashboard() {
   const [user, setUser] = useState(null);
   const router = useRouter();
-  
+
   // Boeken state
   const [boeken, setBoeken] = useState([]);
   const [titel, setTitel] = useState("");
@@ -36,12 +35,14 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     const init = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
         router.push("/login");
         return;
       }
-      
+
       // Check if user is admin
       const { data: adminData } = await supabase
         .from("admins")
@@ -61,7 +62,10 @@ export default function AdminDashboard() {
   }, []);
 
   const loadBoeken = async () => {
-    const { data } = await supabase.from("boeken").select("*").order('volgorde_nummer');
+    const { data } = await supabase
+      .from("boeken")
+      .select("*")
+      .order("volgorde_nummer");
     setBoeken(data || []);
   };
 
@@ -70,7 +74,7 @@ export default function AdminDashboard() {
       .from("lessen")
       .select("*")
       .eq("boek_id", boekId)
-      .order('volgorde_nummer');
+      .order("volgorde_nummer");
     setLessen(data || []);
   };
 
@@ -82,8 +86,8 @@ export default function AdminDashboard() {
         beschrijving,
         categorie,
         pdf_url: pdfUrl,
-        volgorde_nummer: parseInt(volgordeNummer)
-      }
+        volgorde_nummer: parseInt(volgordeNummer),
+      },
     ]);
 
     if (error) {
@@ -112,8 +116,8 @@ export default function AdminDashboard() {
         titel: lesTitel,
         les_url: lesUrl,
         volgorde_nummer: parseInt(lesVolgordeNummer),
-        boek_id: selectedBoekId
-      }
+        boek_id: selectedBoekId,
+      },
     ]);
 
     if (error) {
@@ -140,8 +144,8 @@ export default function AdminDashboard() {
         vraag: toetsVraag,
         opties: JSON.parse(toetsOpties),
         juiste_optie: juisteOptie,
-        les_id: selectedLesId
-      }
+        les_id: selectedLesId,
+      },
     ]);
 
     if (error) {
@@ -167,8 +171,8 @@ export default function AdminDashboard() {
         vraag: eindtoetsVraag,
         opties: JSON.parse(eindtoetsOpties),
         juiste_optie: eindtoetsJuisteOptie,
-        boek_id: selectedBoekId
-      }
+        boek_id: selectedBoekId,
+      },
     ]);
 
     if (error) {
@@ -187,7 +191,7 @@ export default function AdminDashboard() {
   return (
     <div className={styles.container}>
       <h1>Admin Dashboard</h1>
-      
+
       <section className={styles.section}>
         <h2>Nieuw Boek Toevoegen</h2>
         <form onSubmit={handleSubmitBoek} className={styles.form}>
@@ -227,8 +231,8 @@ export default function AdminDashboard() {
       <section className={styles.section}>
         <h2>Nieuwe Les Toevoegen</h2>
         <form onSubmit={handleSubmitLes} className={styles.form}>
-          <select 
-            value={selectedBoekId || ''} 
+          <select
+            value={selectedBoekId || ""}
             onChange={(e) => {
               setSelectedBoekId(e.target.value);
               loadLessen(e.target.value);
@@ -266,7 +270,10 @@ export default function AdminDashboard() {
       <section className={styles.section}>
         <h2>Nieuwe Les Toets Toevoegen</h2>
         <form onSubmit={handleSubmitLesToets} className={styles.form}>
-          <select value={selectedLesId || ''} onChange={(e) => setSelectedLesId(e.target.value)}>
+          <select
+            value={selectedLesId || ""}
+            onChange={(e) => setSelectedLesId(e.target.value)}
+          >
             <option value="">Selecteer een les</option>
             {lessen.map((les) => (
               <option key={les.id} value={les.id}>
@@ -298,7 +305,10 @@ export default function AdminDashboard() {
       <section className={styles.section}>
         <h2>Nieuwe Eindtoets Toevoegen</h2>
         <form onSubmit={handleSubmitEindtoets} className={styles.form}>
-          <select value={selectedBoekId || ''} onChange={(e) => setSelectedBoekId(e.target.value)}>
+          <select
+            value={selectedBoekId || ""}
+            onChange={(e) => setSelectedBoekId(e.target.value)}
+          >
             <option value="">Selecteer een boek</option>
             {boeken.map((boek) => (
               <option key={boek.id} value={boek.id}>

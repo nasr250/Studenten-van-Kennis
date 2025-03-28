@@ -36,17 +36,9 @@ export default function LessonPage() {
         if (lesError) throw lesError;
         setLes(lesData);
 
-        // Fetch existing progress
-        const { data: voortgangData } = await supabase
-          .from("voortgang")
-          .select("*")
-          .eq("gebruiker_id", user.id)
-          .eq("boek_id", lesData.boek_id)
-          .single();
-
         // Fetch existing note
         const { data: notitieData } = await supabase
-          .from("les_notities")
+          .from("notities")
           .select("*")
           .eq("gebruiker_id", user.id)
           .eq("les_id", id)
@@ -54,7 +46,7 @@ export default function LessonPage() {
 
         if (notitieData) {
           setBestaandeNotitie(notitieData);
-          setNotitie(notitieData.notitie);
+          setNotitie(notitieData.inhoud);
         }
 
         // Fetch quiz questions
@@ -64,38 +56,56 @@ export default function LessonPage() {
           .eq("les_id", id);
 
         setQuiz(quizData?.[0] || null);
-        setVoortgang(voortgangData);
 
-        // Update bekeken_lessons if not already viewed
-        // Zoek bestaande voortgang voor dit boek
-        const { data: existingVoortgang } = await supabase
+        // 📈 Voortgang checken
+        const { data: voortgang, error: voortgangError } = await supabase
           .from("voortgang")
           .select("*")
           .eq("gebruiker_id", user.id)
           .eq("boek_id", lesData.boek_id)
           .single();
 
-        if (existingVoortgang) {
-          const bekeken = existingVoortgang.bekeken_lessons || [];
+        setVoortgang(voortgang);
+
+        if (voortgangError && voortgangError.code !== "PGRST116") {
+          // 116 = no rows found, dat is OK
+          console.error("Fout bij voortgang ophalen:", voortgangError);
+        }
+
+        // Als voortgang bestaat:
+        if (voortgang) {
+          const bekeken = voortgang.bekeken_lessons || [];
+
+          // Als les nog niet bekeken, voeg toe
           if (!bekeken.includes(id)) {
-            const updatedBekeken = [...bekeken, id];
+            const nieuweBekeken = [...bekeken, id];
             await supabase
               .from("voortgang")
               .update({
-                bekeken_lessons: updatedBekeken,
+                bekeken_lessons: nieuweBekeken,
                 laatste_activiteit: new Date().toISOString(),
               })
-              .eq("id", existingVoortgang.id);
+              .eq("id", voortgang.id);
+          } else {
+            // Alleen update van activiteit
+            await supabase
+              .from("voortgang")
+              .update({
+                laatste_activiteit: new Date().toISOString(),
+              })
+              .eq("id", voortgang.id);
           }
         } else {
-          // Als er nog geen voortgang is voor dit boek, maak dan één record aan
-          await supabase.from("voortgang").insert({
-            gebruiker_id: user.id,
-            boek_id: lesData.boek_id,
-            bekeken_lessons: [id],
-            voltooide_lessons: [],
-            laatste_activiteit: new Date().toISOString(),
-          });
+          // Geen voortgang? Nieuw record aanmaken
+          await supabase.from("voortgang").insert([
+            {
+              gebruiker_id: user.id,
+              boek_id: lesData.boek_id,
+              bekeken_lessons: [id],
+              voltooide_eindtoets: false,
+              laatste_activiteit: new Date().toISOString(),
+            },
+          ]);
         }
       } catch (error) {
         console.error("Error fetching lesson data:", error);
@@ -144,7 +154,9 @@ export default function LessonPage() {
   };
 
   const markLessonComplete = async () => {
-    if (!voortgang || !user || !les) return;
+    if (!voortgang || !user || !les) {
+      return;
+    }
 
     try {
       const voltooide = voortgang.voltooide_lessons || [];
@@ -178,14 +190,15 @@ export default function LessonPage() {
   return (
     <div className={styles.container}>
       <h1>{les.titel}</h1>
-      {les.les_url && (
-        <iframe
-          src={les.les_url}
-          className={styles.lessonFrame}
-          title={les.titel}
-        />
-      )}
-
+      <div className={styles.videoContainer}>
+        {les.les_url && (
+          <iframe
+            src={les.les_url}
+            className={styles.lessonFrame}
+            title={les.titel}
+          />
+        )}
+      </div>
       <div className={styles.notesSection}>
         <h2>Notities</h2>
         <textarea
@@ -194,15 +207,17 @@ export default function LessonPage() {
           placeholder="Schrijf hier je notities..."
           className={styles.notesInput}
         />
-        <button onClick={handleNotitieSubmit}>Notities Opslaan</button>
+        <button onClick={handleNotitieSubmit} className={styles.button}>
+          Notities Opslaan
+        </button>
       </div>
 
       {quiz && (
         <div className={styles.quizSection}>
           <h2>Toets</h2>
           <p className={styles.question}>{quiz.vraag}</p>
-          {quiz.opties && (
-            quiz.opties.includes("[")
+          {quiz.opties &&
+            (quiz.opties.includes("[")
               ? JSON.parse(quiz.opties).map((optie, index) => (
                   <button
                     key={index}
@@ -213,23 +228,24 @@ export default function LessonPage() {
                   </button>
                 ))
               : typeof quiz.opties === "string"
-              ? quiz.opties.split(",").map((optie, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setAntwoord(optie.trim())}
-                    className={`${styles.button} ${
-                      antwoord === optie.trim() ? styles.correct : ""
-                    }`}
-                  >
-                    {optie.trim()}
-                  </button>
-                ))
-              : null
-          )}
+                ? quiz.opties.split(",").map((optie, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setAntwoord(optie.trim())}
+                      className={`${styles.button} ${
+                        antwoord === optie.trim() ? styles.correct : ""
+                      }`}
+                    >
+                      {optie.trim()}
+                    </button>
+                  ))
+                : null)}
           {feedback && (
             <div
               className={`${styles.feedback} ${
-                antwoord === quiz.juiste_antwoord ? styles.correct : styles.incorrect
+                antwoord === quiz.juiste_antwoord
+                  ? styles.correct
+                  : styles.incorrect
               }`}
             >
               {feedback}
@@ -240,7 +256,7 @@ export default function LessonPage() {
 
       <button
         onClick={markLessonComplete}
-        className={styles.completeButton}
+        className={styles.button}
         disabled={voortgang?.voltooide_lessons?.includes(id)}
       >
         {voortgang?.voltooide_lessons?.includes(id)

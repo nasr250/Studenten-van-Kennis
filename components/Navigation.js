@@ -1,19 +1,31 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
-import Link from 'next/link';
-import { useRouter } from 'next/router';
-import styles from '../styles/Navigation.module.css';
+import { useEffect, useState } from "react";
+import { supabase } from "../lib/supabase";
+import Link from "next/link";
+import { useRouter } from "next/router";
+import styles from "../styles/Navigation.module.css";
 
 export default function Navigation() {
-  const [user, setUser] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true); // Toevoegen om te controleren of de gebruiker geladen is
   const router = useRouter();
 
   useEffect(() => {
     // Haal de ingelogde gebruiker op en kijk of ze admin zijn
     const fetchUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      const { data: adminData, error } = await supabase
+        .from("admins")
+        .select("*")
+        .eq("user_id", user.id)
+        .single();
+
+      if (adminData) {
+        setIsAdmin(true);
+      }
+
       setLoading(false);
     };
 
@@ -22,7 +34,7 @@ export default function Navigation() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.push('/login');
+    router.push("/login");
   };
 
   if (loading) return null; // Wacht tot de gebruiker geladen is voordat de UI wordt weergegeven
@@ -34,9 +46,7 @@ export default function Navigation() {
       <Link href="/voortgang">Voortgang</Link>
 
       {/* Controleer hier of de gebruiker een admin is */}
-      {user?.role === 'admin' && (
-        <Link href="/admin-dashboard">Admin Dashboard</Link>
-      )}
+      {isAdmin && <Link href="/admin-dashboard">Admin Dashboard</Link>}
 
       <button onClick={handleLogout}>Uitloggen</button>
     </nav>
