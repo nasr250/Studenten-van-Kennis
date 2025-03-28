@@ -1,0 +1,22 @@
+# Ignore environment files
+.env
+
+# Ignore build directories
+build/
+dist/
+out/
+.next/
+
+# Ignore dependencies
+node_modules/
+
+# Ignore specific large files
+*.node
+
+# Ignore logs
+logs/
+*.log
+
+# Ignore system files
+.DS_Store
+Thumbs.db

@@ -33,16 +33,9 @@ export default function BookEditPage() {
           .eq("id", id)
           .single();
         if (data) setBoek(data);
-
-        const { data: lessonData } = await supabase
-          .from("lessen")
-          .select("*")
-          .eq("boek_id", id)
-          .order("volgorde_nummer", { ascending: true });
-        setLessen(lessonData || []);
       }
     };
-
+    loadLessen();
     loadBoek();
     loadCategories();
   }, [id, isNew]);
@@ -50,6 +43,15 @@ export default function BookEditPage() {
   const loadCategories = async () => {
     const { data } = await supabase.from("categorieen").select("*");
     setCategories(data || []);
+  };
+  const loadLessen = async () => {
+    const { data: lessonData } = await supabase
+      .from("lessen")
+      .select("*")
+      .eq("boek_id", id)
+      .order("volgorde_nummer", { ascending: true });
+    setLessen(lessonData || []);
+    return lessonData;
   };
 
   const handleSubmit = async (e) => {
@@ -110,8 +112,9 @@ export default function BookEditPage() {
 
         if (error) throw error;
 
-        // Update local state
-        setLessen((prev) => [...prev, ...newLessons]);
+        // Update local state after lessons are added to the database
+        await loadLessen(); // Ensure lessons are loaded after insertion
+        setLessen((prev) => [...prev]); // Optionally you could just fetch again if needed
         alert("Lessen succesvol aangemaakt van playlist!");
       } else if (playlistUrl.includes("soundcloud.com")) {
         console.log("SoundCloud playlist URL detected");
@@ -127,7 +130,6 @@ export default function BookEditPage() {
         }
         console.log("Tracks:", data.tracks);
         const newLessons = data.tracks.map((track, index) => ({
-          id: `temp_${Date.now()}_${index}`,
           titel: track.title,
           les_url: track.url, // URL to the SoundCloud track
           volgorde_nummer: index + 1,
@@ -136,8 +138,9 @@ export default function BookEditPage() {
         // Insert all lessons into the database
         const { error } = await supabase.from("lessen").insert(newLessons);
         if (error) throw error;
-        // Update local state
-        setLessen((prev) => [...prev, ...newLessons]);
+        // Update local state after lessons are added to the database
+        await loadLessen(); // Ensure lessons are loaded after insertion
+        setLessen((prev) => [...prev]); // Optionally you could just fetch again if needed
         alert("Lessen succesvol aangemaakt van SoundCloud playlist!");
       } else {
         alert("Voer een geldige YouTube of SoundCloud playlist URL in");
