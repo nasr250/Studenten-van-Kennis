@@ -10,7 +10,11 @@ export default function BookEditPage() {
   const { id } = router.query;
   const isNew = id === "new";
 
-  const [boek, setBoek] = useState({ titel: "", beschrijving: "", categorie_id: "" });
+  const [boek, setBoek] = useState({
+    titel: "",
+    beschrijving: "",
+    categorie_id: "",
+  });
   const [lessen, setLessen] = useState([]);
   const [categories, setCategories] = useState([]);
   const [newLesson, setNewLesson] = useState({
@@ -55,10 +59,7 @@ export default function BookEditPage() {
       if (isNew) {
         await supabase.from("boeken").insert(boek);
       } else {
-        await supabase
-          .from("boeken")
-          .update(boek)
-          .eq("id", id);
+        await supabase.from("boeken").update(boek).eq("id", id);
       }
       router.push("/admin-dashboard");
     } catch (error) {
@@ -113,22 +114,29 @@ export default function BookEditPage() {
         // Update local state
         setLessen((prev) => [...prev, ...newLessons]);
         alert("Lessen succesvol aangemaakt van playlist!");
-      } else if (playlistUrl.includes("soundcloud.com/sets/")) {
-        // Call the function to fetch playlist data
-        const tracks = await fetchPlaylistData(playlistUrl);
-        const newLessons = tracks.map((track, index) => ({
+      } else if (playlistUrl.includes("soundcloud.com")) {
+        console.log("SoundCloud playlist URL detected");
+
+        // Call the scraping API
+        const res = await fetch(
+          "/api/scrape?url=" + encodeURIComponent(playlistUrl),
+        );
+        const data = await res.json();
+
+        if (!data.tracks) {
+          throw new Error("Geen tracks gevonden in playlist");
+        }
+        console.log(data);
+        const newLessons = data.tracks.map((track, index) => ({
           id: `temp_${Date.now()}_${index}`, // Add a unique temporary ID
           titel: track.title,
-          les_url: track.permalink_url, // URL to the SoundCloud track
+          les_url: track.url, // URL to the SoundCloud track
           volgorde_nummer: index + 1,
           boek_id: id,
         }));
-
         // Insert all lessons into the database
         const { error } = await supabase.from("lessen").insert(newLessons);
-
         if (error) throw error;
-
         // Update local state
         setLessen((prev) => [...prev, ...newLessons]);
         alert("Lessen succesvol aangemaakt van SoundCloud playlist!");
@@ -140,35 +148,6 @@ export default function BookEditPage() {
       alert("Er is een fout opgetreden bij het verwerken van de playlist");
     }
   };
-
-  async function fetchPlaylistData(url) {
-    try {
-      const { data: html } = await axios.get(url);
-      const $ = cheerio.load(html);
-      const pageDataScript = $(
-        'script:contains("window.__sc_hydration")',
-      ).html();
-      const matches = pageDataScript.match(/window\.__sc_hydration = (.*);/);
-
-      if (matches && matches[1]) {
-        const scData = JSON.parse(matches[1]);
-        const tracks = scData.find((item) => item.hydration?.data?.tracks)
-          ?.hydration?.data?.tracks;
-
-        if (!tracks) throw new Error("Geen tracks gevonden in playlist");
-
-        return tracks.map((track) => ({
-          title: track.title,
-          permalink_url: track.permalink_url,
-        }));
-      }
-      throw new Error("Geen playlist data gevonden");
-    } catch (error) {
-      console.error("Error scraping playlist:", error);
-      throw new Error("Kon playlist niet laden");
-    }
-  }
-
 
   const handleAddLesson = async () => {
     const { error } = await supabase
@@ -184,10 +163,7 @@ export default function BookEditPage() {
   };
 
   const handleDeleteLesson = async (lessonId) => {
-    const { error } = await supabase
-      .from("lessen")
-      .delete()
-      .eq("id", lessonId);
+    const { error } = await supabase.from("lessen").delete().eq("id", lessonId);
     if (!error) {
       setLessen((prev) => prev.filter((les) => les.id !== lessonId));
     }
