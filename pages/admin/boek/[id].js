@@ -48,23 +48,8 @@ export default function BookEdit() {
         // Update local state
         setLessen(prev => [...prev, ...newLessons]);
         alert("Lessen succesvol aangemaakt van playlist!");
-      } else if (playlistUrl.includes("soundcloud.com/sets/")) {
-        // Direct SoundCloud playlist URL can be used
-        const newLesson = {
-          titel: "SoundCloud Playlist",
-          les_url: playlistUrl,
-          volgorde_nummer: lessen.length + 1,
-          boek_id: id
-        };
-        
-        const { error } = await supabase
-          .from("lessen")
-          .insert([newLesson]);
-          
-        if (error) throw error;
-        
-        setLessen(prev => [...prev, newLesson]);
-        alert("SoundCloud playlist les succesvol toegevoegd!");
+      } else if (playlistUrl.includes("soundcloud.com")) {
+        alert("SoundCloud playlist verwerking komt binnenkort!");
       } else {
         alert("Voer een geldige YouTube of SoundCloud playlist URL in");
       }
