@@ -26,6 +26,11 @@
   transform: translateY(-5px);
 }
 
+.categorie {
+  margin: 1.5rem 0; /* Boven en onder een marge van 1.5rem */
+  color: var(--primary-color); /* Kleur voor de kop */
+  font-size: 1.8rem; /* Aangepaste lettergrootte */
+}
 
 /* home.css (or wherever the original styles were) */
 .title {
@@ -37,6 +42,8 @@
 
 .bookList {
   composes: grid from global;
+  list-style-type: none; /* Verbergt de bullet points */
+  padding: 0;            /* Verwijdert standaard padding */
 }
 
 .bookCard {

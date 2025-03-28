@@ -14,11 +14,16 @@ export default function AdminDashboard() {
     { field: "id", headerName: "ID", width: 90 },
     { field: "titel", headerName: "Titel", width: 200 },
     { field: "beschrijving", headerName: "Beschrijving", width: 300 },
-    { field: "categorieen.naam", headerName: "Categorie", width: 130 },
+    {
+      field: "categorieen",
+      headerName: "Categorie",
+      width: 130,
+      valueGetter: (params) => params.naam || "-",
+    },
     {
       field: "actions",
       headerName: "Acties",
-      width: 200,
+      width: 400,
       renderCell: (params) => (
         <Box>
           <Button
@@ -73,7 +78,16 @@ export default function AdminDashboard() {
   const loadBoeken = async () => {
     const { data, error } = await supabase
       .from("boeken")
-      .select("id, titel, beschrijving, categorieen (naam)") // Voeg deze regel toe om de categorie naam op te halen
+      .select(
+        `
+        id, 
+        titel, 
+        beschrijving, 
+        categorieen (
+          naam
+        )
+      `,
+      )
       .order("categorie_id");
     if (error) {
       console.error("Error loading books:", error);
@@ -112,10 +126,10 @@ export default function AdminDashboard() {
           rowsPerPageOptions={[5, 10, 25, 50]}
           checkboxSelection
           disableSelectionOnClick
-          getRowHeight={() => 'auto'}
+          getRowHeight={() => "auto"}
           sx={{
-            '& .MuiDataGrid-cell': {
-              padding: '12px',
+            "& .MuiDataGrid-cell": {
+              padding: "12px",
             },
           }}
         />

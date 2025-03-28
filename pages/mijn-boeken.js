@@ -6,26 +6,42 @@ export default function Home() {
   const [boeken, setBoeken] = useState([]);
 
   useEffect(() => {
-    supabase
-      .from("boeken")
-      .select("*")
-      .then(({ data }) => {
-        setBoeken(data);
-      });
+    const loadBoeken = async () => {
+      const { data } = await supabase
+        .from("boeken")
+        .select(`*, categorieen (naam)`); // Zorg ervoor dat de categorienaam wordt opgehaald
+      setBoeken(data || []);
+    };
+    loadBoeken();
   }, []);
+
+  // Groepeer boeken op categorie
+  const groupedBoeken = boeken.reduce((acc, boek) => {
+    const categorieNaam = boek.categorieen?.naam || "Onbekend";
+    if (!acc[categorieNaam]) {
+      acc[categorieNaam] = [];
+    }
+    acc[categorieNaam].push(boek);
+    return acc;
+  }, {});
 
   return (
     <div className={styles.container}>
       <h1 className={styles.title}>Islamitische Boeken & Lesprogramma's</h1>
-      <ul className={styles.bookList}>
-        {boeken.map((boek) => (
-          <li key={boek.id} className={styles.bookCard}>
-            <a href={`/boeken/${boek.id}`} className={styles.bookLink}>
-              {boek.titel}
-            </a>
-          </li>
-        ))}
-      </ul>
+      {Object.entries(groupedBoeken).map(([categorie, boeken]) => (
+        <div key={categorie}>
+          <h2 className={styles.categorie}>{categorie}</h2>
+          <ul className={styles.bookList}>
+            {boeken.map((boek) => (
+              <li key={boek.id} className={styles.bookCard}>
+                <a href={`/boeken/${boek.id}`} className={styles.bookLink}>
+                  {boek.titel}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
     </div>
   );
 }
