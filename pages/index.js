@@ -67,9 +67,6 @@ export default function Home() {
             Welkom, beheerder! Hier kun je alle gebruikers beheren en
             systeeminstellingen aanpassen.
           </p>
-          <button onClick={() => router.push("/admin-dashboard")}>
-            Naar Admin Dashboard
-          </button>
         </div>
       ) : (
         <div>
