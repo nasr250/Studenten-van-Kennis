@@ -99,7 +99,6 @@ export default function BookEditPage() {
 
         // Create lessons from playlist items
         const newLessons = data.items.map((item, index) => ({
-          id: `temp_${Date.now()}_${index}`, // Add temporary ID
           titel: item.snippet.title,
           les_url: `https://www.youtube.com/embed/${item.snippet.resourceId.videoId}`,
           volgorde_nummer: index + 1,
