@@ -18,46 +18,87 @@ export default function BookEdit() {
     try {
       // Extract video IDs from playlist URL
       let playlistId = "";
-      if (playlistUrl.includes("youtube.com") || playlistUrl.includes("youtu.be")) {
+      if (
+        playlistUrl.includes("youtube.com") ||
+        playlistUrl.includes("youtu.be")
+      ) {
         playlistId = playlistUrl.match(/[?&]list=([^&]+)/)?.[1];
         if (!playlistId) {
           alert("Ongeldige YouTube playlist URL");
           return;
         }
-        
+
         // Fetch playlist data from YouTube API
-        const response = await fetch(`https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=50&playlistId=${playlistId}&key=${process.env.NEXT_PUBLIC_YOUTUBE_API_KEY}`);
+        const response = await fetch(
+          `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=50&playlistId=${playlistId}&key=${process.env.NEXT_PUBLIC_YOUTUBE_API_KEY}`,
+        );
         const data = await response.json();
-        
+
         // Create lessons from playlist items
         const newLessons = data.items.map((item, index) => ({
           id: `temp_${Date.now()}_${index}`, // Add temporary ID
           titel: item.snippet.title,
           les_url: `https://www.youtube.com/embed/${item.snippet.resourceId.videoId}`,
           volgorde_nummer: index + 1,
-          boek_id: id
+          boek_id: id,
         }));
 
         // Insert all lessons into database
-        const { error } = await supabase
-          .from("lessen")
-          .insert(newLessons);
+        const { error } = await supabase.from("lessen").insert(newLessons);
 
         if (error) throw error;
-        
+
         // Update local state
-        setLessen(prev => [...prev, ...newLessons]);
+        setLessen((prev) => [...prev, ...newLessons]);
         alert("Lessen succesvol aangemaakt van playlist!");
-      } else if (playlistUrl.includes("soundcloud.com")) {
-        alert("SoundCloud playlist verwerking komt binnenkort!");
-      } else {
-        alert("Voer een geldige YouTube of SoundCloud playlist URL in");
-      }
+      } else if (playlistUrl.includes("soundcloud.com/sets/")) {
+          // Call the function to fetch playlist data
+          const tracks = await fetchPlaylistData(playlistUrl);
+          const newLessons = tracks.map((track, index) => ({
+            id: `temp_${Date.now()}_${index}`, // Add a unique temporary ID
+            titel: track.title,
+            les_url: track.permalink_url, // URL to the SoundCloud track
+            volgorde_nummer: index + 1,
+            boek_id: id,
+          }));
+
+          // Insert all lessons into the database
+          const { error } = await supabase.from("lessen").insert(newLessons);
+
+          if (error) throw error;
+
+          // Update local state
+          setLessen((prev) => [...prev, ...newLessons]);
+          alert("Lessen succesvol aangemaakt van SoundCloud playlist!");
+        } else {
+          alert("Voer een geldige YouTube of SoundCloud playlist URL in");
+        }
     } catch (error) {
       console.error("Error processing playlist:", error);
       alert("Er is een fout opgetreden bij het verwerken van de playlist");
     }
-  };
+  
+
+  async function fetchPlaylistData(playlistUrl) {
+    const clientId = "YOUR_CLIENT_ID"; // Replace with your SoundCloud client ID
+    const resolveUrl = `https://api.soundcloud.com/resolve?url=${playlistUrl}&client_id=${clientId}`;
+
+    const resolveResponse = await fetch(resolveUrl);
+    const resolveData = await resolveResponse.json();
+
+    if (resolveData.kind === "playlist") {
+      const playlistId = resolveData.id;
+      const playlistInfoUrl = `https://api-v2.soundcloud.com/playlists/${playlistId}?client_id=${clientId}`;
+
+      const playlistResponse = await fetch(playlistInfoUrl);
+      const playlistData = await playlistResponse.json();
+
+      return playlistData.tracks;
+    } else {
+      throw new Error("Geen geldige playlist URL");
+    }
+  }
+
   const [newLesson, setNewLesson] = useState({
     titel: "",
     les_url: "",
@@ -239,7 +280,7 @@ export default function BookEdit() {
           {isNew ? "Toevoegen" : "Opslaan"}
         </Button>
       </Box>
-      
+
       <Box sx={{ mt: 4, mb: 2 }}>
         <h3>Playlist Toevoegen</h3>
         <TextField
@@ -249,8 +290,8 @@ export default function BookEdit() {
           sx={{ mb: 2 }}
           onChange={(e) => setPlaylistUrl(e.target.value)}
         />
-        <Button 
-          variant="contained" 
+        <Button
+          variant="contained"
           color="secondary"
           onClick={handleProcessPlaylist}
           sx={{ mr: 2 }}
