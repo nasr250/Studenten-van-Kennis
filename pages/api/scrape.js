@@ -1,4 +1,3 @@
-// /pages/api/scrape.js
 
 import axios from "axios";
 import { load } from "cheerio";
@@ -13,29 +12,48 @@ export default async function handler(req, res) {
   try {
     const { data: html } = await axios.get(url);
     const $ = load(html);
+    
+    // Find all script tags and log their content
+    const scripts = $("script").get();
+    let scData = null;
+    
+    for (const script of scripts) {
+      const content = $(script).html();
+      if (content && content.includes("window.__sc_hydration")) {
+        try {
+          const match = content.match(/window\.__sc_hydration\s*=\s*(\[.*?\]);/s);
+          if (match && match[1]) {
+            scData = JSON.parse(match[1]);
+            break;
+          }
+        } catch (parseError) {
+          console.error("Error parsing script content:", parseError);
+        }
+      }
+    }
 
-    const scriptContent = $("script")
-      .map((i, el) => $(el).html())
-      .get()
-      .find((txt) => txt?.includes("window.__sc_hydration"));
+    if (!scData) {
+      console.error("No SoundCloud data found in scripts");
+      return res.status(404).json({ error: "Geen SoundCloud data gevonden" });
+    }
 
-    if (!scriptContent) throw new Error("Geen script gevonden");
+    const playlistData = scData.find(item => item.hydratable === "playlist");
+    
+    if (!playlistData || !playlistData.data || !playlistData.data.tracks) {
+      console.error("No tracks found in playlist data");
+      return res.status(404).json({ error: "Geen tracks gevonden in playlist" });
+    }
 
-    const match = scriptContent.match(/window\.__sc_hydration = (.*);/);
-    const scData = JSON.parse(match[1]);
-
-    const tracks =
-      scData.find((item) => item.hydration?.data?.tracks)?.hydration?.data
-        ?.tracks || [];
-
-    const formatted = tracks.map((track) => ({
+    const tracks = playlistData.data.tracks.map(track => ({
       title: track.title,
-      url: track.permalink_url,
+      url: track.permalink_url
     }));
 
-    res.status(200).json({ tracks: formatted });
+    console.log("Found tracks:", tracks);
+    res.status(200).json({ tracks });
+    
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Kon playlist niet laden" });
+    console.error("Scraping error:", err);
+    res.status(500).json({ error: "Kon playlist niet laden: " + err.message });
   }
 }
