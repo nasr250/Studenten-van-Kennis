@@ -126,8 +126,9 @@ export default function BookEditPage() {
         if (!data.tracks) {
           throw new Error("Geen tracks gevonden in playlist");
         }
+        console.log("Tracks:", data.tracks);
         const newLessons = data.tracks.map((track, index) => ({
-          id: `temp_${Date.now()}_${index}`, // Add a unique temporary ID
+          id: `temp_${Date.now()}_${index}`,
           titel: track.title,
           les_url: track.url, // URL to the SoundCloud track
           volgorde_nummer: index + 1,
