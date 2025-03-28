@@ -104,14 +104,20 @@ export default function AdminDashboard() {
     <div className={styles.container}>
       <h1>Admin Dashboard</h1>
 
-      <Box sx={{ height: 400, width: "100%", marginBottom: 2 }}>
+      <Box sx={{ height: 650, width: "100%", marginBottom: 2 }}>
         <DataGrid
           rows={boeken}
           columns={columns}
-          pageSize={5}
-          rowsPerPageOptions={[5]}
+          pageSize={10}
+          rowsPerPageOptions={[5, 10, 25, 50]}
           checkboxSelection
           disableSelectionOnClick
+          getRowHeight={() => 'auto'}
+          sx={{
+            '& .MuiDataGrid-cell': {
+              padding: '12px',
+            },
+          }}
         />
       </Box>
 
