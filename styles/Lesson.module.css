@@ -19,7 +19,15 @@
   color: #666;
   font-style: italic;
 }
+.notesSection {
+  margin-top: 20px;
+}
 
+.feedback {
+  color: green;
+  font-size: 0.9rem;
+  margin-top: 5px;
+}
 .videoContainer {
   margin: 2rem 0;
   position: relative;
