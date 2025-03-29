@@ -124,6 +124,17 @@ export default function BookPage() {
             📘 Download PDF
           </a>
         )}
+        {boek.externe_url && (
+          <a
+            href={boek.externe_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.button}
+            style={{ marginLeft: "10px" }}
+          >
+            🔗 Boek Aanschaffen
+          </a>
+        )}
       </div>
 
       <h2 className={styles.subtitle}>Lessenreeksen</h2>

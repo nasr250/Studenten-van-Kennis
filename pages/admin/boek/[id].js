@@ -74,40 +74,47 @@ export default function BookEditPage() {
     setSelectedLessenreeks(lessenreeksId);
     loadLessen(lessenreeksId);
   };
+
   const handleDeleteLessenreeks = async (lessenreeksId) => {
-    if (window.confirm("Weet je zeker dat je deze lessenreeks en alle bijbehorende lessen wilt verwijderen?")) {
+    if (
+      window.confirm(
+        "Weet je zeker dat je deze lessenreeks en alle bijbehorende lessen wilt verwijderen?"
+      )
+    ) {
       try {
-        // Verwijder eerst de lessen die aan de lessenreeks zijn gekoppeld
         const { error: lessonsError } = await supabase
           .from("lessen")
           .delete()
           .eq("lessenreeks_id", lessenreeksId);
-  
+
         if (lessonsError) {
           console.error("Error deleting lessons:", lessonsError);
           alert("Er is een fout opgetreden bij het verwijderen van de lessen.");
           return;
         }
-  
-        // Verwijder daarna de lessenreeks
+
         const { error: lessenreeksError } = await supabase
           .from("lessenreeksen")
           .delete()
           .eq("id", lessenreeksId);
-  
+
         if (lessenreeksError) {
           console.error("Error deleting lessenreeks:", lessenreeksError);
-          alert("Er is een fout opgetreden bij het verwijderen van de lessenreeks.");
+          alert(
+            "Er is een fout opgetreden bij het verwijderen van de lessenreeks."
+          );
           return;
         }
-  
+
         alert("Lessenreeks en bijbehorende lessen succesvol verwijderd.");
-        loadLessenreeksen(); // Herlaad de lijst met lessenreeksen
-        setSelectedLessenreeks(null); // Reset de geselecteerde lessenreeks
-        setLessen([]); // Reset de lessenlijst
+        loadLessenreeksen();
+        setSelectedLessenreeks(null);
+        setLessen([]);
       } catch (err) {
         console.error("Error:", err);
-        alert("Er is een fout opgetreden bij het verwijderen van de lessenreeks.");
+        alert(
+          "Er is een fout opgetreden bij het verwijderen van de lessenreeks."
+        );
       }
     }
   };
@@ -121,7 +128,6 @@ export default function BookEditPage() {
     }
 
     try {
-      // Maak de lessenreeks aan
       const { data: lessenreeksData, error: lessenreeksError } = await supabase
         .from("lessenreeksen")
         .insert({
@@ -137,13 +143,11 @@ export default function BookEditPage() {
 
       const lessenreeksId = lessenreeksData.id;
 
-      // Verwerk de playlist en maak lessen aan
-      let playlistId = "";
       if (
         playlistUrl.includes("youtube.com") ||
         playlistUrl.includes("youtu.be")
       ) {
-        playlistId = playlistUrl.match(/[?&]list=([^&]+)/)?.[1];
+        const playlistId = playlistUrl.match(/[?&]list=([^&]+)/)?.[1];
         if (!playlistId) {
           alert("Ongeldige YouTube playlist URL");
           return;
@@ -196,13 +200,44 @@ export default function BookEditPage() {
         alert("Voer een geldige YouTube of SoundCloud playlist URL in");
       }
 
-      // Herlaad de lessenreeksen
       loadLessenreeksen();
     } catch (error) {
       console.error("Error processing playlist:", error);
       alert("Er is een fout opgetreden bij het verwerken van de playlist");
     }
   };
+
+  const saveBoek = async () => {
+    try {
+      if (isNew) {
+        const { error } = await supabase.from("boeken").insert(boek);
+        if (error) throw error;
+        alert("Boek succesvol aangemaakt!");
+        router.push("/admin/boeken");
+      } else {
+        const { error } = await supabase.from("boeken").update(boek).eq("id", id);
+        if (error) throw error;
+        console.log("Boek succesvol opgeslagen!");
+      }
+    } catch (error) {
+      console.error("Error saving book:", error);
+      alert("Er is een fout opgetreden bij het opslaan van het boek.");
+    }
+  };
+
+  useEffect(() => {
+    const handleBeforeUnload = (event) => {
+      saveBoek();
+      event.preventDefault();
+      event.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [boek]);
 
   return (
     <div className={styles.container}>
@@ -230,6 +265,24 @@ export default function BookEditPage() {
           multiline
           rows={4}
         />
+        <TextField
+          fullWidth
+          label="PDF URL"
+          name="pdf_url"
+          value={boek.pdf_url || ""}
+          onChange={(e) =>
+            setBoek((prev) => ({ ...prev, pdf_url: e.target.value }))
+          }
+        />
+        <TextField
+          fullWidth
+          label="Externe URL"
+          name="externe_url"
+          value={boek.externe_url || ""}
+          onChange={(e) =>
+            setBoek((prev) => ({ ...prev, externe_url: e.target.value }))
+          }
+        />
         <Select
           fullWidth
           name="categorie_id"
@@ -245,6 +298,13 @@ export default function BookEditPage() {
             </MenuItem>
           ))}
         </Select>
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={saveBoek}
+        >
+          Opslaan
+        </Button>
       </Box>
 
       <Box sx={{ mt: 4, mb: 2 }}>
@@ -320,12 +380,11 @@ export default function BookEditPage() {
           rowsPerPageOptions={[5]}
           getRowId={(row) => row.id}
           onRowClick={(params) => handleLessenreeksSelect(params.row.id)} // Zorg dat dit correct is
-
         />
 
       </Box>
       {selectedLessenreeks && (
-        <Box sx={{ height: 400, width: "100%", mt: 4 }}>
+        <Box sx={{ height: 400, width: "100%", mt: 4, marginTop: "70px"}}>
           <h3>Lessen van Geselecteerde Lessenreeks</h3>
           <DataGrid
             rows={lessen}

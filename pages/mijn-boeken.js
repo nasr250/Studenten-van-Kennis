@@ -9,7 +9,8 @@ export default function Home() {
     const loadBoeken = async () => {
       const { data } = await supabase
         .from("boeken")
-        .select(`*, categorieen (naam)`); // Zorg ervoor dat de categorienaam wordt opgehaald
+        .select(`*, categorieen (id,naam)`) // Zorg ervoor dat de categorienaam wordt opgehaald
+        .order("categorieen (id)", { ascending: true }); // Sorteer op categorienaam oplopend
       setBoeken(data || []);
     };
     loadBoeken();
