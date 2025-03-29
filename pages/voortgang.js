@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import styles from "../styles/Progress.module.css";
@@ -20,6 +19,8 @@ export default function VoortgangPage() {
   }, []);
 
   const fetchVoortgang = async (userId) => {
+    if (!userId) return; // Ensure userId is not null before proceeding
+
     try {
       // Haal alle boeken op met gerelateerde data
       const { data: boeken } = await supabase

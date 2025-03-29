@@ -12,6 +12,7 @@ export default function BookPage() {
   const [selectedLessenreeks, setSelectedLessenreeks] = useState(null);
   const [voortgang, setVoortgang] = useState(null);
   const [user, setUser] = useState(null);
+  const [allLessonsCompleted, setAllLessonsCompleted] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user));
@@ -19,7 +20,7 @@ export default function BookPage() {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!id || !user) return;
+      if (!id || !user) return; // Ensure user is not null before proceeding
 
       try {
         // Haal boekdetails op
@@ -60,6 +61,28 @@ export default function BookPage() {
 
     fetchData();
   }, [id, user]);
+
+  useEffect(() => {
+    const checkLessonsCompletion = async () => {
+      const { data: lessons } = await supabase
+        .from("lessen")
+        .select("id")
+        .eq("boek_id", id);
+
+      const { data: progress } = await supabase
+        .from("voortgang")
+        .select("voltooide_lessons")
+        .eq("user_id", user.id)
+        .single();
+
+      const completedLessons = progress?.voltooide_lessons || [];
+      setAllLessonsCompleted(
+        lessons.every((lesson) => completedLessons.includes(lesson.id))
+      );
+    };
+
+    checkLessonsCompletion();
+  }, [id]);
 
   const handleSelectLessenreeks = async (lessenreeksId) => {
     setSelectedLessenreeks(lessenreeksId);
@@ -181,6 +204,11 @@ export default function BookPage() {
             <p>Geen lessen beschikbaar voor deze lessenreeks</p>
           )}
         </>
+      )}
+      {allLessonsCompleted && (
+        <button onClick={() => router.push(`/eindtoets/${id}`)}>
+          Eindtoets Maken
+        </button>
       )}
     </div>
   );

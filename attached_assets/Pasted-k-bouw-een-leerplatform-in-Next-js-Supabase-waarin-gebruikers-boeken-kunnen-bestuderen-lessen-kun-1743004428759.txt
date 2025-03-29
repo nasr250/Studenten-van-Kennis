@@ -59,6 +59,9 @@ Haal vragen op uit eind_toetsen
 
 Toets maken, score tonen, opslaan in voortgang
 
+📚 3. Toetsbeheer
+Admins kunnen eindtoetsen en lestoetsen beheren via /admin/toetsbeheer.
+
 📈 6. Voortgang
 Sla voortgang per gebruiker op in voortgang:
 

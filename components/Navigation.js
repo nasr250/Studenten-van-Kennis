@@ -46,7 +46,12 @@ export default function Navigation() {
       <Link href="/voortgang">Voortgang</Link>
 
       {/* Controleer hier of de gebruiker een admin is */}
-      {isAdmin && <Link href="/admin-dashboard">Admin Dashboard</Link>}
+      {isAdmin && (
+        <>
+          <Link href="/admin-dashboard">Admin Dashboard</Link>
+          <Link href="/admin/toetsbeheer">Toetsbeheer</Link>
+        </>
+      )}
 
       <button onClick={handleLogout}>Uitloggen</button>
     </nav>

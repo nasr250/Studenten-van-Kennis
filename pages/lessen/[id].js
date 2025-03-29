@@ -29,7 +29,7 @@ export default function LessonPage() {
 
   useEffect(() => {
     const fetchLessonData = async () => {
-      if (!id || !user) return;
+      if (!id || !user) return; // Ensure user is not null before proceeding
       setIsLoading(true);
 
       try {
