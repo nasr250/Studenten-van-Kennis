@@ -1,46 +1,7 @@
-const puppeteer = require('puppeteer');
+import axios from "axios";
+import { load } from "cheerio";
 
-async function scrapeSoundCloudPlaylist(playlistUrl) {
-  // Start de browser en maak een nieuwe pagina
-  const browser = await puppeteer.launch({ headless: true });
-  const page = await browser.newPage();
-
-  // Ga naar de opgegeven SoundCloud playlist URL
-  await page.goto(playlistUrl, { waitUntil: 'domcontentloaded' });
-
-  // Wacht totdat de tracklijst geladen is (specifieke selector afhankelijk van de pagina)
-  await page.waitForSelector('ul.trackList__list');
-
-  // Haal de trackdata op
-  const tracks = await page.evaluate(() => {
-    // Zoek naar de track items
-    const trackElements = document.querySelectorAll('ul.trackList__list > li.trackList__item');
-
-    // Verzamel de titel en URL van elke track
-    const trackData = [];
-    trackElements.forEach((track) => {
-      const titleElement = track.querySelector('.trackItem__trackTitle');
-      const urlElement = track.querySelector('a');
-      if (titleElement && urlElement) {
-        trackData.push({
-          title: titleElement.innerText.trim(),
-          url: `https://soundcloud.com${urlElement.getAttribute('href')}`,
-        });
-      }
-    });
-
-    return trackData; // Retourneer de verzamelde trackdata
-  });
-
-  // Sluit de browser
-  await browser.close();
-
-  // Geef de trackdata terug
-  return tracks;
-}
-
-// Dit is de functie die je kunt aanroepen in je API route
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
   const { url } = req.query;
 
   if (!url) {
@@ -48,14 +9,74 @@ module.exports = async (req, res) => {
   }
 
   try {
-    // Roep de scraping functie aan om de tracks op te halen
-    const tracks = await scrapeSoundCloudPlaylist(url);
+    const { data: html } = await axios.get(url);
+    const $ = load(html);
 
-    // Als er geen tracks zijn gevonden
-    if (!tracks.length) {
+    let formattedTracks = [];
+
+    // === 1. Eerst proberen via __sc_hydration JSON ===
+    const scripts = $("script").get();
+    let scData = null;
+
+    console.log("Zoeken naar __sc_hydration in scripts...");
+
+    for (const script of scripts) {
+      const content = $(script).html();
+      if (content && content.includes("window.__sc_hydration")) {
+        const match = content.match(/window\.__sc_hydration\s*=\s*(\[.*?\]);/s);
+        if (match && match[1]) {
+          scData = JSON.parse(match[1]);
+          console.log("Gegevens uit __sc_hydration gevonden:", scData);
+          break;
+        }
+      }
+    }
+
+    if (scData) {
+      // Zoek naar de playlist data
+      const playlistData = scData.find(
+        (item) =>
+          item.hydratable === "playlist" || item.hydratable === "sound-list"
+      );
+
+      if (playlistData) {
+        console.log("Playlist data gevonden:", playlistData);
+      } else {
+        console.log("Geen playlist data gevonden in __sc_hydration.");
+      }
+
+      const tracks = Array.isArray(playlistData?.data?.tracks)
+        ? playlistData.data.tracks
+        : playlistData?.data || [];
+
+      console.log("Aantal tracks gevonden in de playlist:", tracks.length);
+
+      // Verbeterde filtering van de tracks:
+      formattedTracks = tracks
+        .map((track) => {
+          // We controleren nu of de track een titel heeft en zo ja, maken we een URL.
+          const title = track?.title || "Onbekend"; // Zet een fallback voor lege titels
+          const user = track?.user?.permalink || "onbekend";
+          const slug = track?.permalink || "";
+          const url = track?.permalink_url || `https://soundcloud.com/${user}/${slug}`;
+
+          return { title, url };
+        })
+        .filter((track) => track?.title); // Filteren op basis van een geldige titel (mag ook "Onbekend" zijn)
+
+      console.log("Aantal tracks na filtering:", formattedTracks.length);
+    } else {
+      console.log("Geen __sc_hydration data gevonden.");
+    }
+
+    if (formattedTracks.length === 0) {
       return res.status(404).json({ error: "Geen tracks gevonden in playlist" });
     }
 
-    // Return de tracks als JSON
-    res.status(200).json({ tracks });
+    // Return de tracks
+    res.status(200).json({ tracks: formattedTracks });
+  } catch (err) {
+    console.error("Scraping error:", err);
+    res.status(500).json({ error: "Kon playlist niet laden: " + err.message });
   }
+}

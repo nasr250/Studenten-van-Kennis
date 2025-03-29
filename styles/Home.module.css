@@ -40,6 +40,12 @@
   font-size: 2.5rem;
 }
 
+.teacherName {
+  font-size: 0.9rem;
+  color: #555;
+  margin-left: 10px;
+}
+
 .bookList {
   composes: grid from global;
   list-style-type: none; /* Verbergt de bullet points */

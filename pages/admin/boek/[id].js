@@ -16,13 +16,15 @@ export default function BookEditPage() {
     categorie_id: "",
   });
   const [lessen, setLessen] = useState([]);
+  const [lessenreeksen, setLessenreeksen] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [newLesson, setNewLesson] = useState({
-    titel: "",
-    les_url: "",
-    volgorde_nummer: 1,
-  });
+  const [leraren, setLeraren] = useState([]);
+  const [selectedLessenreeks, setSelectedLessenreeks] = useState(null);
   const [playlistUrl, setPlaylistUrl] = useState("");
+  const [newLessenreeks, setNewLessenreeks] = useState({
+    titel: "",
+    leraar_id: "",
+  });
 
   useEffect(() => {
     const loadBoek = async () => {
@@ -35,53 +37,107 @@ export default function BookEditPage() {
         if (data) setBoek(data);
       }
     };
-    loadLessen();
     loadBoek();
+    loadLessenreeksen();
     loadCategories();
+    loadLeraren();
   }, [id, isNew]);
 
   const loadCategories = async () => {
     const { data } = await supabase.from("categorieen").select("*");
     setCategories(data || []);
   };
-  const loadLessen = async () => {
+
+  const loadLeraren = async () => {
+    const { data } = await supabase.from("leraren").select("*");
+    setLeraren(data || []);
+  };
+
+  const loadLessenreeksen = async () => {
+    const { data } = await supabase
+      .from("lessenreeksen")
+      .select("*")
+      .eq("boek_id", id);
+    setLessenreeksen(data || []);
+  };
+
+  const loadLessen = async (lessenreeksId) => {
     const { data: lessonData } = await supabase
       .from("lessen")
       .select("*")
-      .eq("boek_id", id)
+      .eq("lessenreeks_id", lessenreeksId)
       .order("volgorde_nummer", { ascending: true });
     setLessen(lessonData || []);
-    return lessonData;
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    try {
-      if (isNew) {
-        await supabase.from("boeken").insert(boek);
-      } else {
-        await supabase.from("boeken").update(boek).eq("id", id);
+  const handleLessenreeksSelect = (lessenreeksId) => {
+    setSelectedLessenreeks(lessenreeksId);
+    loadLessen(lessenreeksId);
+  };
+  const handleDeleteLessenreeks = async (lessenreeksId) => {
+    if (window.confirm("Weet je zeker dat je deze lessenreeks en alle bijbehorende lessen wilt verwijderen?")) {
+      try {
+        // Verwijder eerst de lessen die aan de lessenreeks zijn gekoppeld
+        const { error: lessonsError } = await supabase
+          .from("lessen")
+          .delete()
+          .eq("lessenreeks_id", lessenreeksId);
+  
+        if (lessonsError) {
+          console.error("Error deleting lessons:", lessonsError);
+          alert("Er is een fout opgetreden bij het verwijderen van de lessen.");
+          return;
+        }
+  
+        // Verwijder daarna de lessenreeks
+        const { error: lessenreeksError } = await supabase
+          .from("lessenreeksen")
+          .delete()
+          .eq("id", lessenreeksId);
+  
+        if (lessenreeksError) {
+          console.error("Error deleting lessenreeks:", lessenreeksError);
+          alert("Er is een fout opgetreden bij het verwijderen van de lessenreeks.");
+          return;
+        }
+  
+        alert("Lessenreeks en bijbehorende lessen succesvol verwijderd.");
+        loadLessenreeksen(); // Herlaad de lijst met lessenreeksen
+        setSelectedLessenreeks(null); // Reset de geselecteerde lessenreeks
+        setLessen([]); // Reset de lessenlijst
+      } catch (err) {
+        console.error("Error:", err);
+        alert("Er is een fout opgetreden bij het verwijderen van de lessenreeks.");
       }
-      router.push("/admin-dashboard");
-    } catch (error) {
-      console.error("Error saving book:", error);
     }
   };
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setBoek((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
   const handleProcessPlaylist = async () => {
-    if (!playlistUrl) return;
+    const { titel, leraar_id } = newLessenreeks;
+
+    if (!titel || !leraar_id || !playlistUrl) {
+      alert("Vul alle velden in.");
+      return;
+    }
 
     try {
-      // Extract video IDs from playlist URL
+      // Maak de lessenreeks aan
+      const { data: lessenreeksData, error: lessenreeksError } = await supabase
+        .from("lessenreeksen")
+        .insert({
+          titel,
+          leraar_id,
+          boek_id: id,
+          playlist_url: playlistUrl,
+        })
+        .select()
+        .single();
+
+      if (lessenreeksError) throw lessenreeksError;
+
+      const lessenreeksId = lessenreeksData.id;
+
+      // Verwerk de playlist en maak lessen aan
       let playlistId = "";
       if (
         playlistUrl.includes("youtube.com") ||
@@ -93,116 +149,73 @@ export default function BookEditPage() {
           return;
         }
 
-        // Fetch playlist data from YouTube API
         const response = await fetch(
-          `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=50&playlistId=${playlistId}&key=${process.env.NEXT_PUBLIC_YOUTUBE_API_KEY}`,
+          `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=50&playlistId=${playlistId}&key=${process.env.NEXT_PUBLIC_YOUTUBE_API_KEY}`
         );
         const data = await response.json();
 
-        // Create lessons from playlist items
         const newLessons = data.items.map((item, index) => ({
           titel: item.snippet.title,
+          boek_id: id,
           les_url: `https://www.youtube.com/embed/${item.snippet.resourceId.videoId}`,
           volgorde_nummer: index + 1,
-          boek_id: id,
+          lessenreeks_id: lessenreeksId,
         }));
 
-        // Insert all lessons into database
-        const { error } = await supabase.from("lessen").insert(newLessons);
+        const { error: lessonsError } = await supabase
+          .from("lessen")
+          .insert(newLessons);
+        if (lessonsError) throw lessonsError;
 
-        if (error) throw error;
-
-        // Update local state after lessons are added to the database
-        await loadLessen(); // Ensure lessons are loaded after insertion
-        setLessen((prev) => [...prev]); // Optionally you could just fetch again if needed
-        alert("Lessen succesvol aangemaakt van playlist!");
+        alert("Lessenreeks en lessen succesvol aangemaakt!");
       } else if (playlistUrl.includes("soundcloud.com")) {
-        console.log("SoundCloud playlist URL detected");
-
-        // Call the scraping API
         const res = await fetch(
-          "/api/scrape?url=" + encodeURIComponent(playlistUrl),
+          "/api/scrape?url=" + encodeURIComponent(playlistUrl)
         );
         const data = await res.json();
 
         if (!data.tracks) {
           throw new Error("Geen tracks gevonden in playlist");
         }
-        console.log("Tracks:", data.tracks);
+
         const newLessons = data.tracks.map((track, index) => ({
           titel: track.title,
-          les_url: track.url, // URL to the SoundCloud track
-          volgorde_nummer: index + 1,
           boek_id: id,
+          les_url: track.url,
+          volgorde_nummer: index + 1,
+          lessenreeks_id: lessenreeksId,
         }));
-        // Insert all lessons into the database
-        const { error } = await supabase.from("lessen").insert(newLessons);
-        if (error) throw error;
-        // Update local state after lessons are added to the database
-        await loadLessen(); // Ensure lessons are loaded after insertion
-        setLessen((prev) => [...prev]); // Optionally you could just fetch again if needed
-        alert("Lessen succesvol aangemaakt van SoundCloud playlist!");
+
+        const { error: lessonsError } = await supabase
+          .from("lessen")
+          .insert(newLessons);
+        if (lessonsError) throw lessonsError;
+
+        alert("Lessenreeks en lessen succesvol aangemaakt!");
       } else {
         alert("Voer een geldige YouTube of SoundCloud playlist URL in");
       }
+
+      // Herlaad de lessenreeksen
+      loadLessenreeksen();
     } catch (error) {
       console.error("Error processing playlist:", error);
       alert("Er is een fout opgetreden bij het verwerken van de playlist");
     }
   };
 
-  const handleAddLesson = async () => {
-    const { error } = await supabase
-      .from("lessen")
-      .insert({ ...newLesson, boek_id: id });
-    if (!error) {
-      setLessen((prev) => [
-        ...prev,
-        { ...newLesson, id: Math.random().toString() },
-      ]); // Temporary ID for local display
-      setNewLesson({ titel: "", les_url: "", volgorde_nummer: 1 });
-    }
-  };
-
-  const handleDeleteLesson = async (lessonId) => {
-    const { error } = await supabase.from("lessen").delete().eq("id", lessonId);
-    if (!error) {
-      setLessen((prev) => prev.filter((les) => les.id !== lessonId));
-    }
-  };
-
-  const columns = [
-    { field: "id", headerName: "ID", width: 90 },
-    { field: "titel", headerName: "Titel", width: 200 },
-    { field: "les_url", headerName: "Les URL", width: 200 },
-    { field: "volgorde_nummer", headerName: "Volgorde Nummer", width: 150 },
-    {
-      field: "actions",
-      headerName: "Acties",
-      width: 200,
-      renderCell: (params) => (
-        <Button
-          variant="contained"
-          color="error"
-          size="small"
-          onClick={() => handleDeleteLesson(params.row.id)}
-        >
-          Verwijderen
-        </Button>
-      ),
-    },
-  ];
-
   return (
     <div className={styles.container}>
       <h1>{isNew ? "Nieuw Boek" : "Boek Bewerken"}</h1>
-      <Box component="form" onSubmit={handleSubmit} className={styles.form}>
+      <Box component="form" className={styles.form}>
         <TextField
           fullWidth
           label="Titel"
           name="titel"
           value={boek.titel}
-          onChange={handleChange}
+          onChange={(e) =>
+            setBoek((prev) => ({ ...prev, titel: e.target.value }))
+          }
           margin="normal"
         />
         <TextField
@@ -210,17 +223,20 @@ export default function BookEditPage() {
           label="Beschrijving"
           name="beschrijving"
           value={boek.beschrijving}
-          onChange={handleChange}
+          onChange={(e) =>
+            setBoek((prev) => ({ ...prev, beschrijving: e.target.value }))
+          }
           margin="normal"
           multiline
           rows={4}
         />
         <Select
           fullWidth
-          label="Categorie"
           name="categorie_id"
           value={boek.categorie_id}
-          onChange={handleChange}
+          onChange={(e) =>
+            setBoek((prev) => ({ ...prev, categorie_id: e.target.value }))
+          }
           margin="normal"
         >
           {categories.map((cat) => (
@@ -229,13 +245,37 @@ export default function BookEditPage() {
             </MenuItem>
           ))}
         </Select>
-        <Button type="submit" variant="contained" color="primary">
-          {isNew ? "Toevoegen" : "Opslaan"}
-        </Button>
       </Box>
 
       <Box sx={{ mt: 4, mb: 2 }}>
-        <h3>Playlist Toevoegen</h3>
+        <h3>Nieuwe Lessenreeks Toevoegen</h3>
+        <TextField
+          fullWidth
+          label="Titel"
+          value={newLessenreeks.titel}
+          onChange={(e) =>
+            setNewLessenreeks((prev) => ({ ...prev, titel: e.target.value }))
+          }
+          sx={{ mb: 2 }}
+        />
+        <Select
+          fullWidth
+          value={newLessenreeks.leraar_id}
+          onChange={(e) =>
+            setNewLessenreeks((prev) => ({ ...prev, leraar_id: e.target.value }))
+          }
+          displayEmpty
+          sx={{ mb: 2 }}
+        >
+          <MenuItem value="" disabled>
+            Selecteer een Leraar
+          </MenuItem>
+          {leraren.map((leraar) => (
+            <MenuItem key={leraar.id} value={leraar.id}>
+              {leraar.naam}
+            </MenuItem>
+          ))}
+        </Select>
         <TextField
           fullWidth
           label="Playlist URL (YouTube/SoundCloud)"
@@ -247,54 +287,75 @@ export default function BookEditPage() {
           variant="contained"
           color="secondary"
           onClick={handleProcessPlaylist}
-          sx={{ mr: 2 }}
         >
-          Playlist Verwerken
+          Lessenreeks en Playlist Verwerken
         </Button>
       </Box>
 
-      <Box component="form">
-        <input
-          type="text"
-          placeholder="Titel"
-          value={newLesson.titel}
-          onChange={(e) =>
-            setNewLesson({ ...newLesson, titel: e.target.value })
-          }
-        />
-        <input
-          type="text"
-          placeholder="Les URL"
-          value={newLesson.les_url}
-          onChange={(e) =>
-            setNewLesson({ ...newLesson, les_url: e.target.value })
-          }
-        />
-        <input
-          type="number"
-          placeholder="Volgorde Nummer"
-          value={newLesson.volgorde_nummer}
-          onChange={(e) =>
-            setNewLesson({
-              ...newLesson,
-              volgorde_nummer: Number(e.target.value),
-            })
-          }
-        />
-        <Button variant="contained" onClick={handleAddLesson}>
-          Voeg Les Toe
-        </Button>
-      </Box>
-
-      <Box sx={{ height: 400, width: "100%" }}>
+      <Box sx={{ height: 400, width: "100%", mt: 4 }}>
+        <h3>Lessenreeksen</h3>
         <DataGrid
-          rows={lessen}
-          columns={columns}
+          rows={lessenreeksen}
+          columns={[
+            { field: "id", headerName: "ID", width: 90 },
+            { field: "titel", headerName: "Titel", width: 200, editable: true },
+            { field: "playlist_url", headerName: "Playlist URL", width: 250, editable: true },
+            {
+              field: "actions",
+              headerName: "Acties",
+              width: 150,
+              renderCell: (params) => (
+                <div>
+                  <Button
+                    color="error"
+                    onClick={() => handleDeleteLessenreeks(params.row.id)}
+                  >
+                    Verwijderen
+                  </Button>
+                </div>
+              ),
+            },
+          ]}
           pageSize={5}
           rowsPerPageOptions={[5]}
           getRowId={(row) => row.id}
+          onRowClick={(params) => handleLessenreeksSelect(params.row.id)} // Zorg dat dit correct is
+
         />
+
       </Box>
+      {selectedLessenreeks && (
+        <Box sx={{ height: 400, width: "100%", mt: 4 }}>
+          <h3>Lessen van Geselecteerde Lessenreeks</h3>
+          <DataGrid
+            rows={lessen}
+            columns={[
+              { field: "id", headerName: "ID", width: 90 },
+              { field: "titel", headerName: "Titel", width: 200, editable: true },
+              { field: "les_url", headerName: "Les URL", width: 250, editable: true },
+              { field: "volgorde_nummer", headerName: "Volgorde Nummer", width: 150 },
+              {
+                field: "actions",
+                headerName: "Acties",
+                width: 150,
+                renderCell: (params) => (
+                  <div>
+                    <Button
+                      color="error"
+                      onClick={() => handleDeleteLes(params.row.id)}
+                    >
+                      Verwijderen
+                    </Button>
+                  </div>
+                ),
+              },
+            ]}
+            pageSize={5}
+            rowsPerPageOptions={[5]}
+            getRowId={(row) => row.id}
+          />
+        </Box>
+      )}
     </div>
   );
 }
