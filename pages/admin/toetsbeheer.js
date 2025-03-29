@@ -8,13 +8,15 @@ export default function ToetsBeheer() {
   const [newVraag, setNewVraag] = useState("");
   const [newOpties, setNewOpties] = useState(["", "", "", ""]);
   const [juisteOptie, setJuisteOptie] = useState("");
+  const [vraagType, setVraagType] = useState("multiple_choice"); // Default vraagtype
   const [type, setType] = useState("les");
   const [id, setId] = useState("");
   const [boeken, setBoeken] = useState([]);
   const [lessen, setLessen] = useState([]);
-  const [lessenreeksen, setLessenreeksen] = useState([]); // New state for lesson series
-  const [selectedLessenreeks, setSelectedLessenreeks] = useState(""); // Selected lesson series
-  const [editVraag, setEditVraag] = useState(null); // State for editing a question
+  const [lessenreeksen, setLessenreeksen] = useState([]);
+  const [selectedLessenreeks, setSelectedLessenreeks] = useState("");
+  const [editVraag, setEditVraag] = useState(null);
+  const [lesId, setLesId] = useState(""); // Nieuw: lesId toegevoegd
 
   useEffect(() => {
     const checkAdmin = async () => {
@@ -83,39 +85,46 @@ export default function ToetsBeheer() {
     const table = type === "les" ? "les_toetsen" : "eind_toetsen";
     const column = type === "les" ? "les_id" : "boek_id";
 
-    const { data } = await supabase.from(table).select("*").eq(column, id);
+    const { data } = await supabase.from(table).select("*").eq(column, lesId);
     setVragen(data || []);
   };
+
+  // Automatisch vragen laden bij wijzigingen in `id` of `selectedLessenreeks`
+  useEffect(() => {
+    if ((type === "les" && lesId) || (type === "boek" && selectedLessenreeks)) {
+      loadVragen();
+    }
+  }, [id, selectedLessenreeks, type]);
 
   const handleAddVraag = async () => {
     const table = type === "les" ? "les_toetsen" : "eind_toetsen";
     const column = type === "les" ? "les_id" : "boek_id";
 
-    await supabase.from(table).insert({
+    const vraagData = {
       vraag: newVraag,
-      opties: newOpties,
-      juiste_optie: juisteOptie,
+      vraag_type: vraagType,
+      juiste_optie: vraagType === "multiple_choice" ? juisteOptie : null,
+      opties: vraagType === "multiple_choice" ? newOpties : null,
       [column]: id,
-    });
+    };
+
+    await supabase.from(table).insert(vraagData);
 
     loadVragen();
     setNewVraag("");
     setNewOpties(["", "", "", ""]);
     setJuisteOptie("");
+    setVraagType("multiple_choice");
   };
 
   const handleUpdateVraag = async () => {
-    if (!editVraag || !editVraag.vraag || !editVraag.opties || !editVraag.juiste_optie) {
+    if (!editVraag || !editVraag.vraag) {
       alert("Vul alle velden in om de vraag bij te werken.");
       return;
     }
 
     const table = type === "les" ? "les_toetsen" : "eind_toetsen";
-    await supabase.from(table).update({
-      vraag: editVraag.vraag,
-      opties: editVraag.opties,
-      juiste_optie: editVraag.juiste_optie,
-    }).eq("id", editVraag.id);
+    await supabase.from(table).update(editVraag).eq("id", editVraag.id);
 
     loadVragen();
     setEditVraag(null);
@@ -197,12 +206,12 @@ export default function ToetsBeheer() {
         )}
         {type === "les" && selectedLessenreeks && (
           <select
-            value={id}
-            onChange={(e) => setId(e.target.value)}
+            value={lesId} // Gebruik lesId in plaats van id
+            onChange={(e) => setLesId(e.target.value)} // Update lesId bij selectie
           >
             <option value="">Selecteer Les</option>
             {lessen
-              .filter((les) => les.lessenreeks_id === selectedLessenreeks) // Filter lessons by selected "lessenreeks"
+              .filter((les) => les.lessenreeks_id === selectedLessenreeks) // Filter lessen op lessenreeks
               .map((les) => (
                 <option key={les.id} value={les.id}>
                   {les.titel}
@@ -210,7 +219,7 @@ export default function ToetsBeheer() {
               ))}
           </select>
         )}
-        {((type === "boek" && selectedLessenreeks) || (type === "les" && id)) && (
+        {((type === "boek" && selectedLessenreeks) || (type === "les" && lesId)) && (
           <>
             <button onClick={loadVragen}>Vragen Laden</button>
             {type === "boek" && (
@@ -222,84 +231,153 @@ export default function ToetsBeheer() {
           </>
         )}
       </div>
-      {((type === "boek" && selectedLessenreeks) || (type === "les" && id)) && (
+      {((type === "boek" && selectedLessenreeks) || (type === "les" && lesId)) && (
         <div className={styles.form}>
           <h2>Nieuwe Vraag Toevoegen</h2>
+          <select value={vraagType} onChange={(e) => setVraagType(e.target.value)}>
+            <option value="multiple_choice">Meerkeuze</option>
+            <option value="open">Open Vraag</option>
+          </select>
           <input
             type="text"
             placeholder="Vraag"
             value={newVraag}
             onChange={(e) => setNewVraag(e.target.value)}
           />
-          {newOpties.map((optie, index) => (
-            <input
-              key={index}
-              type="text"
-              placeholder={`Optie ${index + 1}`}
-              value={optie}
-              onChange={(e) => {
-                const updatedOpties = [...newOpties];
-                updatedOpties[index] = e.target.value;
-                setNewOpties(updatedOpties);
-              }}
-            />
-          ))}
-          <input
-            type="text"
-            placeholder="Juiste Optie"
-            value={juisteOptie}
-            onChange={(e) => setJuisteOptie(e.target.value)}
-          />
+          {vraagType === "multiple_choice" && (
+            <>
+              {newOpties.map((optie, index) => (
+                <input
+                  key={index}
+                  type="text"
+                  placeholder={`Optie ${index + 1}`}
+                  value={optie}
+                  onChange={(e) => {
+                    const updatedOpties = [...newOpties];
+                    updatedOpties[index] = e.target.value;
+                    setNewOpties(updatedOpties);
+                  }}
+                />
+              ))}
+              <input
+                type="text"
+                placeholder="Juiste Optie"
+                value={juisteOptie}
+                onChange={(e) => setJuisteOptie(e.target.value)}
+              />
+            </>
+          )}
           <button onClick={handleAddVraag}>Vraag Toevoegen</button>
         </div>
       )}
-      {((type === "boek" && selectedLessenreeks) || (type === "les" && id)) && (
-        <div>
-          <h2>Bestaande Vragen</h2>
-          {vragen.map((vraag) => (
-            <div key={vraag.id} className={styles.questionCard}>
-              {editVraag?.id === vraag.id ? (
-                <>
-                  <input
-                    type="text"
-                    value={editVraag.vraag}
-                    onChange={(e) => handleEditVraagChange("vraag", e.target.value)}
-                  />
-                  {editVraag.opties.map((optie, index) => (
+      {type === "les" && lesId && (
+        <>
+          <button onClick={handleCreateLesToets}>Lestoets Maken</button>
+          <div>
+            <h2>Bestaande Vragen</h2>
+            {vragen.map((vraag) => (
+              <div key={vraag.id} className={styles.questionCard}>
+                {editVraag?.id === vraag.id ? (
+                  <>
                     <input
-                      key={index}
                       type="text"
-                      value={optie}
-                      onChange={(e) => {
-                        const updatedOpties = [...editVraag.opties];
-                        updatedOpties[index] = e.target.value;
-                        handleEditVraagChange("opties", updatedOpties);
-                      }}
+                      value={editVraag.vraag}
+                      onChange={(e) => handleEditVraagChange("vraag", e.target.value)}
                     />
-                  ))}
-                  <input
-                    type="text"
-                    value={editVraag.juiste_optie}
-                    onChange={(e) => handleEditVraagChange("juiste_optie", e.target.value)}
-                  />
-                  <button onClick={handleUpdateVraag}>Opslaan</button>
-                  <button onClick={() => setEditVraag(null)}>Annuleren</button>
-                </>
-              ) : (
-                <>
-                  <p>{vraag.vraag}</p>
-                  <ul>
-                    {vraag.opties.map((optie, index) => (
-                      <li key={index}>{optie}</li>
-                    ))}
-                  </ul>
-                  <p>Juiste Optie: {vraag.juiste_optie}</p>
-                  <button onClick={() => setEditVraag(vraag)}>Bewerken</button>
-                </>
-              )}
-            </div>
-          ))}
-        </div>
+                    {editVraag.vraag_type === "multiple_choice" &&
+                      editVraag.opties.map((optie, index) => (
+                        <input
+                          key={index}
+                          type="text"
+                          value={optie}
+                          onChange={(e) => {
+                            const updatedOpties = [...editVraag.opties];
+                            updatedOpties[index] = e.target.value;
+                            handleEditVraagChange("opties", updatedOpties);
+                          }}
+                        />
+                      ))}
+                    <input
+                      type="text"
+                      value={editVraag.juiste_optie || ""}
+                      onChange={(e) => handleEditVraagChange("juiste_optie", e.target.value)}
+                    />
+                    <button onClick={handleUpdateVraag}>Opslaan</button>
+                    <button onClick={() => setEditVraag(null)}>Annuleren</button>
+                  </>
+                ) : (
+                  <>
+                    <p>{vraag.vraag}</p>
+                    {vraag.vraag_type === "multiple_choice" && (
+                      <ul>
+                        {vraag.opties.map((optie, index) => (
+                          <li key={index}>{optie}</li>
+                        ))}
+                      </ul>
+                    )}
+                    <p>Juiste Optie: {vraag.juiste_optie}</p>
+                    <button onClick={() => setEditVraag(vraag)}>Bewerken</button>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {type === "boek" && selectedLessenreeks && (
+        <>
+          <button onClick={handleCreateEindToets}>Eindtoets Maken</button>
+          <div>
+            <h2>Bestaande Vragen</h2>
+            {vragen.map((vraag) => (
+              <div key={vraag.id} className={styles.questionCard}>
+                {editVraag?.id === vraag.id ? (
+                  <>
+                    <input
+                      type="text"
+                      value={editVraag.vraag}
+                      onChange={(e) => handleEditVraagChange("vraag", e.target.value)}
+                    />
+                    {editVraag.vraag_type === "multiple_choice" &&
+                      editVraag.opties.map((optie, index) => (
+                        <input
+                          key={index}
+                          type="text"
+                          value={optie}
+                          onChange={(e) => {
+                            const updatedOpties = [...editVraag.opties];
+                            updatedOpties[index] = e.target.value;
+                            handleEditVraagChange("opties", updatedOpties);
+                          }}
+                        />
+                      ))}
+                    <input
+                      type="text"
+                      value={editVraag.juiste_optie || ""}
+                      onChange={(e) => handleEditVraagChange("juiste_optie", e.target.value)}
+                    />
+                    <button onClick={handleUpdateVraag}>Opslaan</button>
+                    <button onClick={() => setEditVraag(null)}>Annuleren</button>
+                  </>
+                ) : (
+                  <>
+                    <p>{vraag.vraag}</p>
+                    {vraag.vraag_type === "multiple_choice" && (
+                      <ul>
+                        {vraag.opties.map((optie, index) => (
+                          <li key={index}>{optie}</li>
+                        ))}
+                      </ul>
+                    )}
+                    <p>Juiste Optie: {vraag.juiste_optie}</p>
+                    <button onClick={() => setEditVraag(vraag)}>Bewerken</button>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );

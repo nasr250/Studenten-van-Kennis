@@ -54,6 +54,26 @@ export default function BookPage() {
           voltooide_lessons: [],
           bekeken_lessons: [],
         });
+        const checkLessonsCompletion = async () => {
+          const { data: lessons } = await supabase
+            .from("lessen")
+            .select("id")
+            .eq("boek_id", id);
+    
+          console.log("user", user);
+          const { data: progress } = await supabase
+            .from("voortgang")
+            .select("voltooide_lessons")
+            .eq("user_id", user.id)
+            .single();
+    
+          const completedLessons = progress?.voltooide_lessons || [];
+          setAllLessonsCompleted(
+            lessons.every((lesson) => completedLessons.includes(lesson.id))
+          );
+        };
+    
+        checkLessonsCompletion();
       } catch (error) {
         console.error("Error fetching data:", error);
       }
@@ -62,27 +82,6 @@ export default function BookPage() {
     fetchData();
   }, [id, user]);
 
-  useEffect(() => {
-    const checkLessonsCompletion = async () => {
-      const { data: lessons } = await supabase
-        .from("lessen")
-        .select("id")
-        .eq("boek_id", id);
-
-      const { data: progress } = await supabase
-        .from("voortgang")
-        .select("voltooide_lessons")
-        .eq("user_id", user.id)
-        .single();
-
-      const completedLessons = progress?.voltooide_lessons || [];
-      setAllLessonsCompleted(
-        lessons.every((lesson) => completedLessons.includes(lesson.id))
-      );
-    };
-
-    checkLessonsCompletion();
-  }, [id]);
 
   const handleSelectLessenreeks = async (lessenreeksId) => {
     setSelectedLessenreeks(lessenreeksId);

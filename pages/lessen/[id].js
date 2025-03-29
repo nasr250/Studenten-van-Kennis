@@ -18,10 +18,10 @@ export default function LessonPage() {
   const [bestaandeNotitie, setBestaandeNotitie] = useState(null);
   const [user, setUser] = useState(null);
   const [voortgang, setVoortgang] = useState(null);
-  const [quiz, setQuiz] = useState(null);
-  const [antwoord, setAntwoord] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
   const [notitie, setNotitie] = useState(""); // Voor Quill.js content
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLaatsteLes, setIsLaatsteLes] = useState(false); // Controle voor laatste les
+  const [heeftLesToets, setHeeftLesToets] = useState(false); // Controle voor les toets
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user));
@@ -29,11 +29,11 @@ export default function LessonPage() {
 
   useEffect(() => {
     const fetchLessonData = async () => {
-      if (!id || !user) return; // Ensure user is not null before proceeding
+      if (!id || !user) return; // Zorg ervoor dat user niet null is
       setIsLoading(true);
 
       try {
-        // Fetch lesson with book data
+        // Fetch lesgegevens met boekinformatie
         const { data: lesData, error: lesError } = await supabase
           .from("lessen")
           .select("*, boek:boek_id(*)")
@@ -43,7 +43,25 @@ export default function LessonPage() {
         if (lesError) throw lesError;
         setLes(lesData);
 
-        // Fetch existing note
+        // Controleer of dit de laatste les is
+        const { data: alleLessen } = await supabase
+          .from("lessen")
+          .select("id")
+          .eq("boek_id", lesData.boek_id);
+
+        const laatsteLesId = alleLessen?.[alleLessen.length - 1]?.id;
+        setIsLaatsteLes(laatsteLesId === id); // Controleer of huidige les de laatste is
+
+        // Controleer of er een les toets bestaat
+        const { data: lesToetsData } = await supabase
+          .from("les_toetsen")
+          .select("id")
+          .eq("les_id", id)
+          .single();
+
+        setHeeftLesToets(!!lesToetsData); // Zet op true als er een les toets bestaat
+
+        // Fetch bestaande notitie
         const { data: notitieData } = await supabase
           .from("les_notities")
           .select("*")
@@ -55,14 +73,6 @@ export default function LessonPage() {
           setBestaandeNotitie(notitieData);
           setNotitie(notitieData.notitie); // Zet de bestaande notitie in Quill.js
         }
-
-        // Fetch quiz questions
-        const { data: quizData } = await supabase
-          .from("les_toetsen")
-          .select("*")
-          .eq("les_id", id);
-
-        setQuiz(quizData?.[0] || null);
 
         // 📈 Voortgang checken
         const { data: voortgang, error: voortgangError } = await supabase
@@ -176,6 +186,45 @@ export default function LessonPage() {
     debouncedSaveNotitie.flush(); // Voer de gedebounceerde functie direct uit
   };
 
+  const handleStartLesToets = async () => {
+    // Haal de toets-ID op uit de tabel `les_toetsen`
+    const { data: toets, error } = await supabase
+      .from("les_toetsen")
+      .select("id")
+      .eq("les_id", id)
+      .single();
+
+    if (error || !toets) {
+      console.error("Les toets niet gevonden:", error);
+      return;
+    }
+
+    // Navigeer naar de toetspagina met de juiste toets-ID
+    router.push(`/toets/${toets.id}?type=les`);
+  };
+
+  const handleStartEindtoets = async () => {
+    if (!les || !les.lessenreeks_id) {
+      console.error("Lessenreeks ID niet gevonden voor deze les.");
+      return;
+    }
+  
+    // Haal de toets-ID op uit de tabel `eind_toetsen` met de juiste `lessenreeks_id`
+    const { data: toets, error } = await supabase
+      .from("eind_toetsen")
+      .select("id")
+      .eq("lessenreeks_id", les.lessenreeks_id)
+      .single();
+  
+    if (error || !toets) {
+      console.error("Eindtoets niet gevonden:", error);
+      return;
+    }
+  
+    // Navigeer naar de toetspagina met de juiste toets-ID
+    router.push(`/toets/${toets.id}?type=boek`);
+  };
+
   if (isLoading) return <div>Laden...</div>;
   if (!les) return <div>Les niet gevonden</div>;
 
@@ -232,22 +281,24 @@ export default function LessonPage() {
         />
       </div>
 
-      {/* Quiz */}
-      {quiz && (
+      {/* Les Toets */}
+      {heeftLesToets && (
         <div className={styles.quizSection}>
-          <h2>Quiz</h2>
-          <p>{quiz.vraag}</p>
-          <input
-            type="text"
-            value={antwoord}
-            onChange={(e) => setAntwoord(e.target.value)}
-            className={styles.quizInput}
-          />
-          <button
-            onClick={() => console.log("Antwoord verzonden:", antwoord)}
-            className={styles.quizButton}
-          >
-            Verzenden
+          <h2>Les Toets</h2>
+          <p>Er is een toets beschikbaar voor deze les. Klik op de onderstaande knop om de toets te starten.</p>
+          <button onClick={handleStartLesToets} className={styles.button}>
+            Start Les Toets
+          </button>
+        </div>
+      )}
+
+      {/* Eindtoets */}
+      {isLaatsteLes && (
+        <div className={styles.quizSection}>
+          <h2>Eindtoets</h2>
+          <p>Je hebt de laatste les voltooid. Klik op de onderstaande knop om de eindtoets te starten.</p>
+          <button onClick={handleStartEindtoets} className={styles.button}>
+            Start Eindtoets
           </button>
         </div>
       )}
