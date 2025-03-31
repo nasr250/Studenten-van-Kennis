@@ -5,30 +5,36 @@ import styles from "../../styles/Exam.module.css";
 
 export default function ExamPage() {
   const router = useRouter();
-  const { id, type } = router.query; // `type` bepaalt of het 'les_toetsen' of 'eind_toetsen' is
-  const [vragen, setVragen] = useState([]);
-  const [antwoorden, setAntwoorden] = useState({});
-  const [submitted, setSubmitted] = useState(false);
-  const [score, setScore] = useState(0);
+  const { id } = router.query; // `id` is de toets-ID
+  const [toets, setToets] = useState(null); // Toetsgegevens
+  const [vragen, setVragen] = useState([]); // Vragen van de toets
+  const [antwoorden, setAntwoorden] = useState({}); // Antwoorden van de gebruiker
+  const [submitted, setSubmitted] = useState(false); // Of de toets is ingeleverd
+  const [score, setScore] = useState(0); // Gebruikersscore
 
+  // Haal toets en vragen op
   useEffect(() => {
-    if (id && type) {
-      // Dynamisch bepalen welke tabel wordt gebruikt
-      const table = type === "les" ? "les_toetsen" : "eind_toetsen";
-      const column = type === "les" ? "les_id" : "boek_id";
-
+    if (id) {
       supabase
-        .from(table)
-        .select("*")
-        .eq(column, id)
-        .then(({ data }) => setVragen(data || []));
+        .from("toetsen")
+        .select("*, toets_vragen(*)")
+        .eq("id", id)
+        .single()
+        .then(({ data, error }) => {
+          if (error) {
+            console.error("Fout bij ophalen toets:", error);
+            return;
+          }
+          setToets(data);
+          setVragen(data?.toets_vragen || []);
+        });
     }
-  }, [id, type]);
+  }, [id]);
 
+  // Verwerk antwoorden en bereken score
   const handleSubmit = async () => {
     let correctAnswers = 0;
 
-    // Controleer de antwoorden
     vragen.forEach((vraag) => {
       if (antwoorden[vraag.id] === vraag.juiste_optie) {
         correctAnswers++;
@@ -39,31 +45,28 @@ export default function ExamPage() {
     setScore(finalScore);
     setSubmitted(true);
 
-    // Sla de score op in de voortgang
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const { data: user } = await supabase.auth.getUser();
+    await supabase.from("voortgang").upsert({
+      gebruiker_id: user.id,
+      toets_id: id,
+      score: finalScore,
+    });
+  };
 
-    if (type === "les") {
-      await supabase.from("voortgang").upsert({
-        user_id: user.id,
-        les_id: id,
-        completed: true,
-        score: finalScore,
-      });
-    } else if (type === "boek") {
-      await supabase.from("voortgang").upsert({
-        user_id: user.id,
-        boek_id: id,
-        completed: true,
-        score: finalScore,
-      });
+  // Navigatie na toets
+  const handleBack = () => {
+    if (toets.type === "les") {
+      router.push(`/lessen/${toets.les_id}`);
+    } else if (toets.type === "eind") {
+      router.push(`/boeken/${toets.boek_id}`);
     }
   };
 
+  if (!toets) return <div>Laden...</div>;
+
   return (
     <div className={styles.container}>
-      <h1>{type === "les" ? "Les Toets" : "Eindtoets"}</h1>
+      <h1>{toets.type === "les" ? "Les Toets" : "Eindtoets"}: {toets.titel}</h1>
       {!submitted ? (
         <>
           {vragen.map((vraag) => (
@@ -112,13 +115,8 @@ export default function ExamPage() {
         <div className={styles.results}>
           <h2>Resultaat</h2>
           <p>Je score: {score.toFixed(1)}%</p>
-          <button
-            onClick={() =>
-              router.push(type === "les" ? `/lessen/${id}` : `/boeken/${id}`)
-            }
-            className={styles.button}
-          >
-            Terug naar {type === "les" ? "Les" : "Boek"}
+          <button onClick={handleBack} className={styles.button}>
+            Terug naar {toets.type === "les" ? "Les" : "Boek"}
           </button>
         </div>
       )}

@@ -22,6 +22,7 @@ export default function LessonPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isLaatsteLes, setIsLaatsteLes] = useState(false); // Controle voor laatste les
   const [heeftLesToets, setHeeftLesToets] = useState(false); // Controle voor les toets
+  const [toets, setToets] = useState(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user));
@@ -123,6 +124,16 @@ export default function LessonPage() {
             },
           ]);
         }
+
+        // Haal de toets op voor de les
+        const { data: toetsData } = await supabase
+          .from("toetsen")
+          .select("*, toets_vragen(*)")
+          .eq("type", "les")
+          .eq("les_id", id)
+          .single();
+
+        setToets(toetsData);
       } catch (error) {
         console.error("Error fetching lesson data:", error);
       } finally {
@@ -186,21 +197,12 @@ export default function LessonPage() {
     debouncedSaveNotitie.flush(); // Voer de gedebounceerde functie direct uit
   };
 
-  const handleStartLesToets = async () => {
-    // Haal de toets-ID op uit de tabel `les_toetsen`
-    const { data: toets, error } = await supabase
-      .from("les_toetsen")
-      .select("id")
-      .eq("les_id", id)
-      .single();
-
-    if (error || !toets) {
-      console.error("Les toets niet gevonden:", error);
-      return;
+  const handleStartLesToets = () => {
+    if (toets) {
+      router.push(`/toets/${toets.id}?type=les`);
+    } else {
+      alert("Geen toets beschikbaar voor deze les.");
     }
-
-    // Navigeer naar de toetspagina met de juiste toets-ID
-    router.push(`/toets/${toets.id}?type=les`);
   };
 
   const handleStartEindtoets = async () => {
@@ -282,7 +284,7 @@ export default function LessonPage() {
       </div>
 
       {/* Les Toets */}
-      {heeftLesToets && (
+      {toets && (
         <div className={styles.quizSection}>
           <h2>Les Toets</h2>
           <p>Er is een toets beschikbaar voor deze les. Klik op de onderstaande knop om de toets te starten.</p>
