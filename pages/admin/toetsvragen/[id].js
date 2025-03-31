@@ -21,7 +21,16 @@ export default function ToetsVragenBeheer() {
   }, [id]);
 
   const fetchVragen = async () => {
-    const { data, error } = await supabase.from("toets_vragen").select("*").eq("toets_id", id);
+    const { data, error } = await supabase
+      .from("toets_vragen")
+      .select(`
+        id,
+        vraag,
+        opties,
+        juiste_optie
+      `)
+      .eq("toets_id", id);
+
     if (error) {
       console.error("Fout bij ophalen vragen:", error);
     } else {

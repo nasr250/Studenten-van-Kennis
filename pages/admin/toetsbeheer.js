@@ -31,10 +31,10 @@ export default function ToetsBeheer() {
     { field: "titel", headerName: "Titel", width: 200 },
     { field: "type", headerName: "Type", width: 130 },
     { field: "aantal_vragen", headerName: "Aantal Vragen", width: 150 },
-    { field: "categorie", headerName: "Categorie", width: 150, valueGetter: (params) => params?.row.categorie_naam || "" },
-    { field: "boek", headerName: "Boek", width: 150, valueGetter: (params) => params?.row.boek_titel || "" },
-    { field: "lessenreeks", headerName: "Lessenreeks", width: 150, valueGetter: (params) => params?.row.lessenreeks_titel || "" },
-    { field: "les", headerName: "Les", width: 150, valueGetter: (params) => params?.row.les_titel || "" },
+    { field: "categorie_naam", headerName: "Categorie", width: 150 },
+    { field: "boek_titel", headerName: "Boek", width: 150 },
+    { field: "lessenreeks_titel", headerName: "Lessenreeks", width: 150 },
+    { field: "les_titel", headerName: "Les", width: 150 },
     {
       field: "actions",
       headerName: "Acties",
@@ -65,12 +65,51 @@ export default function ToetsBeheer() {
   // Haal toetsen op
   useEffect(() => {
     const fetchToetsen = async () => {
-      const { data, error } = await supabase.from("toetsen").select("*");
-      if (error) {
+      try {
+        // Fetch toetsen
+        const { data: toetsenData, error: toetsenError } = await supabase.from("toetsen").select("*");
+        if (toetsenError) throw toetsenError;
+
+        // Fetch lessen
+        const { data: lessenData, error: lessenError } = await supabase.from("lessen").select("*");
+        if (lessenError) throw lessenError;
+
+        // Fetch lessenreeksen
+        const { data: lessenreeksenData, error: lessenreeksenError } = await supabase
+          .from("lessenreeksen")
+          .select("*");
+        if (lessenreeksenError) throw lessenreeksenError;
+
+        // Fetch boeken
+        const { data: boekenData, error: boekenError } = await supabase.from("boeken").select("*");
+        if (boekenError) throw boekenError;
+
+        // Fetch categorieen
+        const { data: categorieenData, error: categorieenError } = await supabase
+          .from("categorieen")
+          .select("*");
+        if (categorieenError) throw categorieenError;
+
+        // Map data
+        const mappedData = toetsenData.map((toets) => {
+          const les = lessenData.find((l) => l.id === toets.les_id) || {};
+          const lessenreeks = lessenreeksenData.find((lr) => lr.id === les.lessenreeks_id) || {};
+          const boek = boekenData.find((b) => b.id === lessenreeks.boek_id) || {};
+          const categorie = categorieenData.find((c) => c.id === boek.categorie_id) || {};
+
+          return {
+            ...toets,
+            categorie_naam: categorie.naam || "Geen Categorie",
+            boek_titel: boek.titel || "Geen Boek",
+            lessenreeks_titel: lessenreeks.titel || "Geen Lessenreeks",
+            les_titel: les.titel || "Geen Les",
+          };
+        });
+
+        setToetsen(mappedData || []);
+        setFilteredToetsen(mappedData || []); // Standaard alle toetsen tonen
+      } catch (error) {
         console.error("Fout bij ophalen toetsen:", error);
-      } else {
-        setToetsen(data || []);
-        setFilteredToetsen(data || []); // Standaard alle toetsen tonen
       }
     };
 
@@ -91,82 +130,83 @@ export default function ToetsBeheer() {
     fetchCategories();
   }, []);
 
-  // Haal boeken op bij geselecteerde categorie
+  // Fetch all options from the database on initial load
   useEffect(() => {
-    if (selectedCategory) {
-      const fetchBoeken = async () => {
-        const { data, error } = await supabase
-          .from("boeken")
-          .select("*")
-          .eq("categorie_id", selectedCategory);
-        if (error) {
-          console.error("Fout bij ophalen boeken:", error);
-        } else {
-          setBoeken(data || []);
-        }
-      };
+    const fetchOptions = async () => {
+      try {
+        const { data: allCategories, error: categoriesError } = await supabase.from("categorieen").select("*");
+        if (categoriesError) throw categoriesError;
+        setCategories(allCategories || []);
 
-      fetchBoeken();
-    }
-  }, [selectedCategory]);
+        const { data: allBoeken, error: boekenError } = await supabase.from("boeken").select("*");
+        if (boekenError) throw boekenError;
+        setBoeken(allBoeken || []);
 
-  // Haal lessenreeksen op bij geselecteerd boek
+        const { data: allLessenreeksen, error: lessenreeksenError } = await supabase.from("lessenreeksen").select("*");
+        if (lessenreeksenError) throw lessenreeksenError;
+        setLessenreeksen(allLessenreeksen || []);
+
+        const { data: allLessen, error: lessenError } = await supabase.from("lessen").select("*");
+        if (lessenError) throw lessenError;
+        setLessen(allLessen || []);
+      } catch (error) {
+        console.error("Fout bij ophalen opties:", error);
+      }
+    };
+
+    fetchOptions();
+  }, []);
+
+  // Dynamically filter options based on selected values
   useEffect(() => {
-    if (selectedBoek) {
-      const fetchLessenreeksen = async () => {
-        const { data, error } = await supabase
-          .from("lessenreeksen")
-          .select("*")
-          .eq("boek_id", selectedBoek);
-        if (error) {
-          console.error("Fout bij ophalen lessenreeksen:", error);
-        } else {
-          setLessenreeksen(data || []);
-        }
-      };
-
-      fetchLessenreeksen();
+    if (filterCategory) {
+      const filteredBoeken = boeken.filter((boek) => boek.categorie_id === parseInt(filterCategory, 10));
+      setBoeken(filteredBoeken);
+      setFilterBoek(""); // Reset boek filter when category changes
+      setFilterLessenreeks(""); // Reset lessenreeks filter
+      setFilterLes(""); // Reset les filter
     }
-  }, [selectedBoek]);
+  }, [filterCategory]);
 
-  // Haal lessen op bij geselecteerde lessenreeks
   useEffect(() => {
-    if (selectedLessenreeks) {
-      const fetchLessen = async () => {
-        const { data, error } = await supabase
-          .from("lessen")
-          .select("*")
-          .eq("lessenreeks_id", selectedLessenreeks);
-        if (error) {
-          console.error("Fout bij ophalen lessen:", error);
-        } else {
-          setLessen(data || []);
-        }
-      };
-
-      fetchLessen();
+    if (filterBoek) {
+      const filteredLessenreeksen = lessenreeksen.filter((reeks) => reeks.boek_id === parseInt(filterBoek, 10));
+      setLessenreeksen(filteredLessenreeksen);
+      setFilterLessenreeks(""); // Reset lessenreeks filter when boek changes
+      setFilterLes(""); // Reset les filter
     }
-  }, [selectedLessenreeks]);
+  }, [filterBoek]);
+
+  useEffect(() => {
+    if (filterLessenreeks) {
+      const filteredLessen = lessen.filter((les) => les.lessenreeks_id === parseInt(filterLessenreeks, 10));
+      setLessen(filteredLessen);
+      setFilterLes(""); // Reset les filter when lessenreeks changes
+    }
+  }, [filterLessenreeks]);
 
   // Update filteredToetsen based on filters
   useEffect(() => {
     let filtered = toetsen;
 
     if (filterCategory) {
-      filtered = filtered.filter((toets) => toets.categorie_id === filterCategory);
+      filtered = filtered.filter((toets) => toets.categorie_naam === categories.find((c) => c.id === parseInt(filterCategory, 10))?.naam);
     }
+
     if (filterBoek) {
-      filtered = filtered.filter((toets) => toets.boek_id === filterBoek);
+      filtered = filtered.filter((toets) => toets.boek_titel === boeken.find((b) => b.id === parseInt(filterBoek, 10))?.titel);
     }
+
     if (filterLessenreeks) {
-      filtered = filtered.filter((toets) => toets.lessenreeks_id === filterLessenreeks);
+      filtered = filtered.filter((toets) => toets.lessenreeks_titel === lessenreeksen.find((lr) => lr.id === parseInt(filterLessenreeks, 10))?.titel);
     }
+
     if (filterLes) {
-      filtered = filtered.filter((toets) => toets.les_id === filterLes);
+      filtered = filtered.filter((toets) => toets.les_titel === lessen.find((l) => l.id === parseInt(filterLes, 10))?.titel);
     }
 
     setFilteredToetsen(filtered);
-  }, [filterCategory, filterBoek, filterLessenreeks, filterLes, toetsen]);
+  }, [filterCategory, filterBoek, filterLessenreeks, filterLes, toetsen, categories, boeken, lessenreeksen, lessen]);
 
   // Filter toetsen op type
   const handleFilterChange = (type) => {
@@ -246,7 +286,7 @@ export default function ToetsBeheer() {
       {/* Filters */}
       <Toolbar disableGutters sx={{ marginBottom: 2 }}>
         <Stack direction="row" spacing={2}>
-          <FormControl fullWidth margin="normal">
+          <FormControl fullWidth margin="normal" sx={{ minWidth: 250 }}>
             <InputLabel>Categorie</InputLabel>
             <Select
               value={filterCategory}
@@ -260,7 +300,7 @@ export default function ToetsBeheer() {
               ))}
             </Select>
           </FormControl>
-          <FormControl fullWidth margin="normal">
+          <FormControl fullWidth margin="normal" sx={{ minWidth: 250 }}>
             <InputLabel>Boek</InputLabel>
             <Select
               value={filterBoek}
@@ -275,7 +315,7 @@ export default function ToetsBeheer() {
               ))}
             </Select>
           </FormControl>
-          <FormControl fullWidth margin="normal">
+          <FormControl fullWidth margin="normal" sx={{ minWidth: 250 }}>
             <InputLabel>Lessenreeks</InputLabel>
             <Select
               value={filterLessenreeks}
@@ -290,7 +330,7 @@ export default function ToetsBeheer() {
               ))}
             </Select>
           </FormControl>
-          <FormControl fullWidth margin="normal">
+          <FormControl fullWidth margin="normal" sx={{ minWidth: 250 }}>
             <InputLabel>Les</InputLabel>
             <Select
               value={filterLes}
