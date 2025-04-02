@@ -71,8 +71,8 @@ export default function ToetsVragenBeheer() {
   // UI voor de DataGrid kolommen
   const columns = [
     { field: "id", headerName: "ID", width: 90 },
-    { field: "vraag", headerName: "Vraag", width: 300 },
-    { field: "juiste_optie", headerName: "Correct Antwoord", width: 300 },
+    { field: "vraag", headerName: "Vraag", width: 300, editable: true },
+    { field: "juiste_optie", headerName: "Correct Antwoord", width: 300, editable: true },
     {
       field: "actions",
       headerName: "Acties",

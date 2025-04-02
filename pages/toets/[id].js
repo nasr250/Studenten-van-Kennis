@@ -11,6 +11,7 @@ export default function ExamPage() {
   const [antwoorden, setAntwoorden] = useState({}); // Antwoorden van de gebruiker
   const [submitted, setSubmitted] = useState(false); // Of de toets is ingeleverd
   const [score, setScore] = useState(0); // Gebruikersscore
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0); // Huidige vraagindex
 
   // Haal toets en vragen op
   useEffect(() => {
@@ -41,16 +42,41 @@ export default function ExamPage() {
       }
     });
 
-    const finalScore = (correctAnswers / vragen.length) * 100;
-    setScore(finalScore);
+    const finalScore = correctAnswers;
+    const totaalVragen = vragen.length;
+    setScore((finalScore / totaalVragen) * 100);
     setSubmitted(true);
 
     const { data: user } = await supabase.auth.getUser();
-    await supabase.from("voortgang").upsert({
-      gebruiker_id: user.id,
-      toets_id: id,
-      score: finalScore,
-    });
+    console.log("Gebruiker:", user);
+    if (user) {
+      const resultaatData = {
+        gebruiker_id: user.user.id,
+        toets_id: id,
+        score: finalScore,
+        totaal_vragen: totaalVragen,
+      };
+      console.log("Resultaat data:", resultaatData);
+      const { error } = await supabase.from("toets_resultaten").insert(resultaatData);
+      if (error) {
+        console.error("Fout bij opslaan toetsresultaat:", error);
+        alert("Er is een fout opgetreden bij het opslaan van het toetsresultaat.");
+      } else {
+        alert("Toetsresultaat succesvol opgeslagen.");
+      }
+    }
+  };
+
+  const handleNextQuestion = () => {
+    if (currentQuestionIndex < vragen.length - 1) {
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
+    }
+  };
+
+  const handlePreviousQuestion = () => {
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex(currentQuestionIndex - 1);
+    }
   };
 
   // Navigatie na toets
@@ -58,7 +84,7 @@ export default function ExamPage() {
     if (toets.type === "les") {
       router.push(`/lessen/${toets.les_id}`);
     } else if (toets.type === "eind") {
-      router.push(`/boeken/${toets.boek_id}`);
+      router.push(`/mijn-boeken`);
     }
   };
 
@@ -69,54 +95,78 @@ export default function ExamPage() {
       <h1>{toets.type === "les" ? "Les Toets" : "Eindtoets"}: {toets.titel}</h1>
       {!submitted ? (
         <>
-          {vragen.map((vraag) => (
-            <div key={vraag.id} className={styles.questionCard}>
-              <p>{vraag.vraag}</p>
-              {vraag.opties && Array.isArray(vraag.opties) ? (
-                vraag.opties.map((optie, index) => (
-                  <div key={index} className={styles.option}>
-                    <label>
-                      <input
-                        type="radio"
-                        name={`vraag-${vraag.id}`}
-                        value={optie}
-                        checked={antwoorden[vraag.id] === optie}
-                        onChange={() =>
-                          setAntwoorden({
-                            ...antwoorden,
-                            [vraag.id]: optie,
-                          })
-                        }
-                      />
-                      {optie}
-                    </label>
-                  </div>
-                ))
-              ) : (
-                <input
-                  type="text"
-                  value={antwoorden[vraag.id] || ""}
-                  onChange={(e) =>
+          <div className={styles.questionCard}>
+            <p>{vragen[currentQuestionIndex]?.vraag}</p>
+            {vragen[currentQuestionIndex]?.opties && Array.isArray(vragen[currentQuestionIndex].opties) ? (
+              vragen[currentQuestionIndex].opties.map((optie, index) => (
+                <div
+                  key={index}
+                  className={`${styles.option} ${
+                    antwoorden[vragen[currentQuestionIndex].id] === optie ? styles.selected : ""
+                  }`}
+                  onClick={() =>
                     setAntwoorden({
                       ...antwoorden,
-                      [vraag.id]: e.target.value,
+                      [vragen[currentQuestionIndex].id]: optie,
                     })
                   }
-                  placeholder="Jouw antwoord"
-                />
-              )}
-            </div>
-          ))}
-          <button onClick={handleSubmit} className={styles.submitButton}>
-            Toets Inleveren
-          </button>
+                >
+                  {optie}
+                </div>
+              ))
+            ) : (
+              <input
+                type="text"
+                value={antwoorden[vragen[currentQuestionIndex]?.id] || ""}
+                onChange={(e) =>
+                  setAntwoorden({
+                    ...antwoorden,
+                    [vragen[currentQuestionIndex]?.id]: e.target.value,
+                  })
+                }
+                placeholder="Jouw antwoord"
+              />
+            )}
+          </div>
+          <div
+            className={`${styles.navigationButtons} ${
+              currentQuestionIndex === 0 && vragen.length > 1
+                ? styles.firstQuestion
+                : styles.default
+            }`}
+          >
+            {currentQuestionIndex > 0 && (
+              <button onClick={handlePreviousQuestion} className={styles.navigationButton}>
+                Terug
+              </button>
+            )}
+            {currentQuestionIndex < vragen.length - 1 ? (
+              <button onClick={handleNextQuestion} className={styles.navigationButton}>
+                Volgende
+              </button>
+            ) : (
+              <button onClick={handleSubmit} className={styles.navigationButton}>
+                Toets Inleveren
+              </button>
+            )}
+          </div>
         </>
       ) : (
         <div className={styles.results}>
           <h2>Resultaat</h2>
           <p>Je score: {score.toFixed(1)}%</p>
+          <div className={styles.answersOverview}>
+            <h3>Overzicht van Antwoorden</h3>
+            {vragen.map((vraag) => (
+              <div key={vraag.id} className={styles.answerCard}>
+                <p><strong>Vraag:</strong> {vraag.vraag}</p>
+                <p><strong>Jouw Antwoord:</strong> {antwoorden[vraag.id] || "Geen antwoord"}</p>
+                <p><strong>Juiste Antwoord:</strong> {vraag.juiste_optie}</p>
+              </div>
+            ))}
+          </div>
           <button onClick={handleBack} className={styles.button}>
-            Terug naar {toets.type === "les" ? "Les" : "Boek"}
+            Terug naar {toets.type === "les" ? "Les" : "Mijn Boeken"}
           </button>
         </div>
       )}

@@ -80,30 +80,37 @@ export default function ToetsBeheer() {
           .select("*");
         if (lessenreeksenError) throw lessenreeksenError;
 
-        // Fetch boeken
-        const { data: boekenData, error: boekenError } = await supabase.from("boeken").select("*");
-        if (boekenError) throw boekenError;
-
-        // Fetch categorieen
-        const { data: categorieenData, error: categorieenError } = await supabase
-          .from("categorieen")
-          .select("*");
+        // Fetch categorieën
+        const { data: categorieenData, error: categorieenError } = await supabase.from("categorieen").select("*");
         if (categorieenError) throw categorieenError;
 
         // Map data
         const mappedData = toetsenData.map((toets) => {
-          const les = lessenData.find((l) => l.id === toets.les_id) || {};
-          const lessenreeks = lessenreeksenData.find((lr) => lr.id === les.lessenreeks_id) || {};
-          const boek = boekenData.find((b) => b.id === lessenreeks.boek_id) || {};
-          const categorie = categorieenData.find((c) => c.id === boek.categorie_id) || {};
+          if (toets.type === "les") {
+            // Voor lestoetsen: haal informatie via lessen
+            const les = lessenData.find((l) => l.id === toets.les_id) || {};
+            const lessenreeks = lessenreeksenData.find((lr) => lr.id === les.lessenreeks_id) || {};
+            const categorie = categorieenData.find((c) => c.id === lessenreeks.categorie_id) || {};
 
-          return {
-            ...toets,
-            categorie_naam: categorie.naam || "Geen Categorie",
-            boek_titel: boek.titel || "Geen Boek",
-            lessenreeks_titel: lessenreeks.titel || "Geen Lessenreeks",
-            les_titel: les.titel || "Geen Les",
-          };
+            return {
+              ...toets,
+              categorie_naam: categorie.naam || "Geen Categorie",
+              lessenreeks_titel: lessenreeks.titel || "Geen Lessenreeks",
+              les_titel: les.titel || "Geen Les",
+            };
+          } else if (toets.type === "eind") {
+            // Voor eindtoetsen: haal informatie via lessenreeksen
+            const lessenreeks = lessenreeksenData.find((lr) => lr.id === toets.lessenreeks_id) || {};
+            const categorie = categorieenData.find((c) => c.id === lessenreeks.categorie_id) || {};
+
+            return {
+              ...toets,
+              categorie_naam: categorie.naam || "Geen Categorie",
+              lessenreeks_titel: lessenreeks.titel || "Geen Lessenreeks",
+              les_titel: "N.v.t.", // Geen specifieke les voor eindtoetsen
+            };
+          }
+          return toets;
         });
 
         setToetsen(mappedData || []);
@@ -242,8 +249,8 @@ export default function ToetsBeheer() {
 
     if (newToets.type === "les" && selectedLes) {
       toetsData.les_id = selectedLes;
-    } else if (newToets.type === "eind" && selectedBoek) {
-      toetsData.boek_id = selectedBoek;
+    } else if (newToets.type === "eind" && selectedLessenreeks) {
+      toetsData.lessenreeks_id = selectedLessenreeks;
     } else {
       alert("Selecteer een geldige les of boek voor de toets.");
       return;
@@ -445,11 +452,13 @@ export default function ToetsBeheer() {
                   onChange={(e) => setSelectedLessenreeks(e.target.value)}
                   disabled={!selectedBoek}
                 >
-                  {lessenreeksen.map((reeks) => (
-                    <MenuItem key={reeks.id} value={reeks.id}>
-                      {reeks.titel}
-                    </MenuItem>
-                  ))}
+                {lessenreeksen
+                    .filter((reeks) => reeks.boek_id === selectedBoek) // Filter lessenreeksen op basis van boek_id
+                    .map((reeks) => (
+                      <MenuItem key={reeks.id} value={reeks.id}>
+                       {reeks.titel}
+                      </MenuItem>
+                    ))}
                 </Select>
               </FormControl>
               <FormControl fullWidth margin="normal">
@@ -459,7 +468,9 @@ export default function ToetsBeheer() {
                   onChange={(e) => setSelectedLes(e.target.value)}
                   disabled={!selectedLessenreeks}
                 >
-                  {lessen.map((les) => (
+                  {lessen
+                  .filter((les) => les.lessenreeks_id === selectedLessenreeks) 
+                  .map((les) => (
                     <MenuItem key={les.id} value={les.id}>
                       {les.titel}
                     </MenuItem>
@@ -490,11 +501,29 @@ export default function ToetsBeheer() {
                   onChange={(e) => setSelectedBoek(e.target.value)}
                   disabled={!selectedCategory}
                 >
-                  {boeken.map((boek) => (
+                  {boeken
+                  .filter((boek) => boek.categorie_id === selectedCategory) // Filter boeken op basis van categorie_id
+                  .map((boek) => (
                     <MenuItem key={boek.id} value={boek.id}>
                       {boek.titel}
                     </MenuItem>
                   ))}
+                </Select>
+              </FormControl>
+              <FormControl fullWidth margin="normal">
+                <InputLabel>Lessenreeks</InputLabel>
+                <Select
+                  value={selectedLessenreeks}
+                  onChange={(e) => setSelectedLessenreeks(e.target.value)}
+                  disabled={!selectedBoek}
+                >
+                  {lessenreeksen
+                    .filter((reeks) => reeks.boek_id === selectedBoek) // Filter lessenreeksen op basis van boek_id
+                    .map((reeks) => (
+                      <MenuItem key={reeks.id} value={reeks.id}>
+                       {reeks.titel}
+                      </MenuItem>
+                    ))}
                 </Select>
               </FormControl>
             </>

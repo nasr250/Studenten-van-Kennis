@@ -46,6 +46,12 @@ export default function VoortgangPage() {
         .select('*')
         .eq('gebruiker_id', userId);
 
+      // Haal toetsresultaten op voor de huidige gebruiker
+      const { data: toetsResultaten } = await supabase
+        .from('toets_resultaten')
+        .select('*')
+        .eq('gebruiker_id', userId);
+
       // Combineer de data
       const gecombineerdeData = boeken.map(boek => {
         const boekVoortgang = voortgang?.find(v => v.boek_id === boek.id) || {
@@ -54,12 +60,14 @@ export default function VoortgangPage() {
           voltooide_eindtoets: false
         };
 
+        const toetsResultaat = toetsResultaten?.find(tr => tr.toets_id === boek.eind_toetsen?.[0]?.id);
+
         const totaleLessen = boek.lessen?.length || 0;
         const voltooideLessen = boekVoortgang.voltooide_lessons?.length || 0;
         const bekekenLessen = boekVoortgang.bekeken_lessons?.length || 0;
-        
+
         const voortgangPercentage = Math.round((voltooideLessen / totaleLessen) * 100) || 0;
-        
+
         return {
           ...boek,
           voortgangPercentage,
@@ -67,6 +75,8 @@ export default function VoortgangPage() {
           totaleLessen,
           bekekenLessen,
           eindtoetsVoltooid: boekVoortgang.voltooide_eindtoets,
+          toetsScore: toetsResultaat ? `${toetsResultaat.score}/${toetsResultaat.totaal_vragen}` : null,
+          voltooidOp: toetsResultaat?.voltooid_op || null,
           status: getVoortgangStatus(voltooideLessen, bekekenLessen, totaleLessen)
         };
       });
@@ -123,6 +133,11 @@ export default function VoortgangPage() {
             <p className={styles.testStatus}>
               <strong>Eindtoets:</strong> {boek.eindtoetsVoltooid ? '✅ Voltooid' : '⏳ Nog niet voltooid'}
             </p>
+            {boek.toetsScore && (
+              <p className={styles.testStatus}>
+                <strong>Toetsresultaat:</strong> {boek.toetsScore} ({boek.voltooidOp ? `Voltooid op: ${new Date(boek.voltooidOp).toLocaleDateString()}` : ''})
+              </p>
+            )}
             <a href={`/boeken/${boek.id}`} className={styles.viewButton}>
               Ga naar Boek
             </a>

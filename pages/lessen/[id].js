@@ -21,7 +21,6 @@ export default function LessonPage() {
   const [notitie, setNotitie] = useState(""); // Voor Quill.js content
   const [isLoading, setIsLoading] = useState(true);
   const [isLaatsteLes, setIsLaatsteLes] = useState(false); // Controle voor laatste les
-  const [heeftLesToets, setHeeftLesToets] = useState(false); // Controle voor les toets
   const [toets, setToets] = useState(null);
 
   useEffect(() => {
@@ -52,15 +51,6 @@ export default function LessonPage() {
 
         const laatsteLesId = alleLessen?.[alleLessen.length - 1]?.id;
         setIsLaatsteLes(laatsteLesId === id); // Controleer of huidige les de laatste is
-
-        // Controleer of er een les toets bestaat
-        const { data: lesToetsData } = await supabase
-          .from("les_toetsen")
-          .select("id")
-          .eq("les_id", id)
-          .single();
-
-        setHeeftLesToets(!!lesToetsData); // Zet op true als er een les toets bestaat
 
         // Fetch bestaande notitie
         const { data: notitieData } = await supabase
@@ -124,15 +114,14 @@ export default function LessonPage() {
             },
           ]);
         }
-
         // Haal de toets op voor de les
-        const { data: toetsData } = await supabase
+          const { data: toetsData, error } = await supabase
           .from("toetsen")
           .select("*, toets_vragen(*)")
-          .eq("type", "les")
-          .eq("les_id", id)
-          .single();
+          .or(`les_id.eq.${id},lessenreeks_id.eq.${lesData.lessenreeks_id}`);
 
+          console.log("toetsData:", toetsData);
+          console.log(error);
         setToets(toetsData);
       } catch (error) {
         console.error("Error fetching lesson data:", error);
@@ -197,36 +186,6 @@ export default function LessonPage() {
     debouncedSaveNotitie.flush(); // Voer de gedebounceerde functie direct uit
   };
 
-  const handleStartLesToets = () => {
-    if (toets) {
-      router.push(`/toets/${toets.id}?type=les`);
-    } else {
-      alert("Geen toets beschikbaar voor deze les.");
-    }
-  };
-
-  const handleStartEindtoets = async () => {
-    if (!les || !les.lessenreeks_id) {
-      console.error("Lessenreeks ID niet gevonden voor deze les.");
-      return;
-    }
-  
-    // Haal de toets-ID op uit de tabel `eind_toetsen` met de juiste `lessenreeks_id`
-    const { data: toets, error } = await supabase
-      .from("eind_toetsen")
-      .select("id")
-      .eq("lessenreeks_id", les.lessenreeks_id)
-      .single();
-  
-    if (error || !toets) {
-      console.error("Eindtoets niet gevonden:", error);
-      return;
-    }
-  
-    // Navigeer naar de toetspagina met de juiste toets-ID
-    router.push(`/toets/${toets.id}?type=boek`);
-  };
-
   if (isLoading) return <div>Laden...</div>;
   if (!les) return <div>Les niet gevonden</div>;
 
@@ -284,22 +243,20 @@ export default function LessonPage() {
       </div>
 
       {/* Les Toets */}
-      {toets && (
+      {toets && !isLaatsteLes && (
         <div className={styles.quizSection}>
           <h2>Les Toets</h2>
           <p>Er is een toets beschikbaar voor deze les. Klik op de onderstaande knop om de toets te starten.</p>
-          <button onClick={handleStartLesToets} className={styles.button}>
+          <button onClick={() => router.push(`/toets/${toets[0]?.id}`)} className={styles.button}>
             Start Les Toets
           </button>
         </div>
       )}
-
-      {/* Eindtoets */}
-      {isLaatsteLes && (
+      {isLaatsteLes && toets && (
         <div className={styles.quizSection}>
           <h2>Eindtoets</h2>
-          <p>Je hebt de laatste les voltooid. Klik op de onderstaande knop om de eindtoets te starten.</p>
-          <button onClick={handleStartEindtoets} className={styles.button}>
+          <p>Dit is de laatste les van deze lessenreeks. Klik op de onderstaande knop om de eindtoets te starten.</p>
+          <button onClick={() => router.push(`/toets/${toets[0]?.id}`)} className={styles.button}>
             Start Eindtoets
           </button>
         </div>
