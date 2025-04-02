@@ -36,7 +36,7 @@ export default function LessonPage() {
         // Fetch lesgegevens met boekinformatie
         const { data: lesData, error: lesError } = await supabase
           .from("lessen")
-          .select("*, boek:boek_id(*)")
+          .select("*, lessenreeks_id, boek:boek_id(*)")
           .eq("id", id)
           .single();
 
@@ -47,7 +47,7 @@ export default function LessonPage() {
         const { data: alleLessen } = await supabase
           .from("lessen")
           .select("id")
-          .eq("boek_id", lesData.boek_id);
+          .eq("lessenreeks_id", lesData.lessenreeks_id);
 
         const laatsteLesId = alleLessen?.[alleLessen.length - 1]?.id;
         setIsLaatsteLes(laatsteLesId === id); // Controleer of huidige les de laatste is
@@ -65,12 +65,12 @@ export default function LessonPage() {
           setNotitie(notitieData.notitie); // Zet de bestaande notitie in Quill.js
         }
 
-        // 📈 Voortgang checken
+        // 📈 Voortgang checken per lessenreeks
         const { data: voortgang, error: voortgangError } = await supabase
           .from("voortgang")
           .select("*")
           .eq("gebruiker_id", user.id)
-          .eq("boek_id", lesData.boek_id)
+          .eq("lessenreeks_id", lesData.lessenreeks_id)
           .single();
 
         setVoortgang(voortgang);
@@ -103,25 +103,27 @@ export default function LessonPage() {
               .eq("id", voortgang.id);
           }
         } else {
-          // Geen voortgang? Nieuw record aanmaken
+          // Geen voortgang? Nieuw record aanmaken per lessenreeks
           await supabase.from("voortgang").insert([
             {
               gebruiker_id: user.id,
               boek_id: lesData.boek_id,
+              lessenreeks_id: lesData.lessenreeks_id, // Voortgang per lessenreeks
               bekeken_lessons: [id],
               voltooide_eindtoets: false,
               laatste_activiteit: new Date().toISOString(),
             },
           ]);
         }
+
         // Haal de toets op voor de les
-          const { data: toetsData, error } = await supabase
+        const { data: toetsData, error } = await supabase
           .from("toetsen")
           .select("*, toets_vragen(*)")
           .or(`les_id.eq.${id},lessenreeks_id.eq.${lesData.lessenreeks_id}`);
 
-          console.log("toetsData:", toetsData);
-          console.log(error);
+        console.log("toetsData:", toetsData);
+        console.log(error);
         setToets(toetsData);
       } catch (error) {
         console.error("Error fetching lesson data:", error);
@@ -184,6 +186,31 @@ export default function LessonPage() {
   const handleBlur = () => {
     // Sla direct op bij verlies van focus
     debouncedSaveNotitie.flush(); // Voer de gedebounceerde functie direct uit
+  };
+
+  const markLessonAsCompleted = async () => {
+    if (!user || !id || !voortgang) return;
+  
+    try {
+      const voltooideLessons = voortgang.voltooide_lessons || [];
+      if (!voltooideLessons.includes(id)) {
+        const updatedLessons = [...voltooideLessons, id];
+        await supabase
+          .from("voortgang")
+          .update({
+            voltooide_lessons: updatedLessons,
+            laatste_activiteit: new Date().toISOString(),
+          })
+          .eq("id", voortgang.id);
+  
+        setVoortgang({ ...voortgang, voltooide_lessons: updatedLessons });
+        alert("Les gemarkeerd als voltooid!");
+      } else {
+        alert("Deze les is al gemarkeerd als voltooid.");
+      }
+    } catch (error) {
+      console.error("Error marking lesson as completed:", error);
+    }
   };
 
   if (isLoading) return <div>Laden...</div>;
@@ -261,6 +288,9 @@ export default function LessonPage() {
           </button>
         </div>
       )}
+      <button onClick={markLessonAsCompleted} className={styles.button}>
+        Markeer les als voltooid
+      </button>
     </div>
   );
 }

@@ -1,4 +1,3 @@
-
 .container {
   max-width: 1200px;
   margin: 0 auto;
@@ -17,6 +16,10 @@
   padding: 1.5rem;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%; /* Ensure all grid items have equal height */
 }
 
 .progressCard h3 {
@@ -32,6 +35,26 @@
   color: var(--primary-color);
   text-align: center;
   margin-bottom: 2rem;
+}
+
+.filters {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.filterDropdown {
+  padding: 8px 12px;
+  font-size: 14px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: #f9f9f9;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+.filterDropdown:hover {
+  border-color: #007bff;
 }
 
 .progressBar {
@@ -67,4 +90,10 @@
 
 .viewButton:hover {
   background: var(--secondary-color);
+}
+
+.startedText {
+  color: #FFA726;
+  font-weight: bold;
+  margin-top: 0.5rem;
 }

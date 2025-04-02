@@ -10,7 +10,7 @@ export default function BookPage() {
   const [lessenreeksen, setLessenreeksen] = useState([]);
   const [lessen, setLessen] = useState([]);
   const [selectedLessenreeks, setSelectedLessenreeks] = useState(null);
-  const [voortgang, setVoortgang] = useState(null);
+  const [voortgang, setVoortgang] = useState({});
   const [user, setUser] = useState(null);
   const [allLessonsCompleted, setAllLessonsCompleted] = useState(false);
 
@@ -20,7 +20,7 @@ export default function BookPage() {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!id || !user) return; // Ensure user is not null before proceeding
+      if (!id || !user) return;
 
       try {
         // Haal boekdetails op
@@ -32,48 +32,30 @@ export default function BookPage() {
         setBoek(bookData);
 
         // Haal lessenreeksen op
-        const { data: lessenreeksenData, error } = await supabase
-        .from("lessenreeksen")
-        .select("*, leraren:lessenreeksen_leraar_id_fkey(id, naam, email)")
-        .eq("boek_id", id);
-      
-        if (error) console.error(error);
+        const { data: lessenreeksenData, error: lessenreeksenError } = await supabase
+          .from("lessenreeksen")
+          .select("*, leraren:lessenreeksen_leraar_id_fkey(id, naam, email)")
+          .eq("boek_id", id);
+
+        if (lessenreeksenError) console.error(lessenreeksenError);
         setLessenreeksen(lessenreeksenData || []);
-        console.log("Lessenreeksen:", lessenreeksenData);
-        // Haal voortgang op
-        const { data: progressData } = await supabase
+
+        // Haal voortgang op per lessenreeks
+        const { data: progressData, error: progressError } = await supabase
           .from("voortgang")
           .select("*")
-          .eq("gebruiker_id", user.id)
-          .eq("boek_id", id)
-          .maybeSingle();
+          .eq("gebruiker_id", user.id);
 
-        setVoortgang(progressData || {
-          gebruiker_id: user.id,
-          boek_id: id,
-          voltooide_lessons: [],
-          bekeken_lessons: [],
+        if (progressError) console.error(progressError);
+
+        // Zet voortgang per lessenreeks
+        const voortgangPerLessenreeks = {};
+        (progressData || []).forEach((voortgang) => {
+          voortgangPerLessenreeks[voortgang.lessenreeks_id] = voortgang;
         });
-        const checkLessonsCompletion = async () => {
-          const { data: lessons } = await supabase
-            .from("lessen")
-            .select("id")
-            .eq("boek_id", id);
-    
-          console.log("user", user);
-          const { data: progress } = await supabase
-            .from("voortgang")
-            .select("voltooide_lessons")
-            .eq("user_id", user.id)
-            .single();
-    
-          const completedLessons = progress?.voltooide_lessons || [];
-          setAllLessonsCompleted(
-            lessons.every((lesson) => completedLessons.includes(lesson.id))
-          );
-        };
-    
-        checkLessonsCompletion();
+        setVoortgang(voortgangPerLessenreeks);
+
+        console.log("Voortgang per lessenreeks:", voortgangPerLessenreeks);
       } catch (error) {
         console.error("Error fetching data:", error);
       }
@@ -81,7 +63,6 @@ export default function BookPage() {
 
     fetchData();
   }, [id, user]);
-
 
   const handleSelectLessenreeks = async (lessenreeksId) => {
     setSelectedLessenreeks(lessenreeksId);
@@ -99,13 +80,15 @@ export default function BookPage() {
     }
   };
 
-  const getLesStatus = (lesId) => {
-    if (!voortgang) return "not-started";
-    const voltooide = Array.isArray(voortgang.voltooide_lessons)
-      ? voortgang.voltooide_lessons
+  const getLesStatus = (lessenreeksId, lesId) => {
+    if (!voortgang || !voortgang[lessenreeksId]) return "not-started";
+
+    const voortgangReeks = voortgang[lessenreeksId];
+    const voltooide = Array.isArray(voortgangReeks.voltooide_lessons)
+      ? voortgangReeks.voltooide_lessons
       : [];
-    const bekeken = Array.isArray(voortgang.bekeken_lessons)
-      ? voortgang.bekeken_lessons
+    const bekeken = Array.isArray(voortgangReeks.bekeken_lessons)
+      ? voortgangReeks.bekeken_lessons
       : [];
 
     if (voltooide.includes(lesId)) {
@@ -128,6 +111,24 @@ export default function BookPage() {
         return "❓";
     }
   };
+
+  useEffect(() => {
+    const checkLessonsCompletion = async () => {
+      if (!selectedLessenreeks || !voortgang[selectedLessenreeks]) return;
+
+      const { data: lessons } = await supabase
+        .from("lessen")
+        .select("id")
+        .eq("lessenreeks_id", selectedLessenreeks);
+
+      const completedLessons = voortgang[selectedLessenreeks]?.voltooide_lessons || [];
+      setAllLessonsCompleted(
+        lessons.every((lesson) => completedLessons.includes(lesson.id))
+      );
+    };
+
+    checkLessonsCompletion();
+  }, [selectedLessenreeks, voortgang]);
 
   if (!boek) return <p>Laden...</p>;
 
@@ -189,11 +190,11 @@ export default function BookPage() {
                 <li key={les.id} className={styles.lessonItem}>
                   <a
                     href={`/lessen/${les.id}`}
-                    className={`${styles.lessonLink} ${styles[getLesStatus(les.id)]}`}
+                    className={`${styles.lessonLink} ${styles[getLesStatus(selectedLessenreeks, les.id)]}`}
                   >
                     <span>{les.titel}</span>
                     <span className={styles.statusBadge}>
-                      {getLesStatusIcon(getLesStatus(les.id))}
+                      {getLesStatusIcon(getLesStatus(selectedLessenreeks, les.id))}
                     </span>
                   </a>
                 </li>
@@ -205,7 +206,7 @@ export default function BookPage() {
         </>
       )}
       {allLessonsCompleted && (
-        <button onClick={() => router.push(`/eindtoets/${id}`)}>
+        <button onClick={() => router.push(`/eindtoets/${selectedLessenreeks}`)}>
           Eindtoets Maken
         </button>
       )}
