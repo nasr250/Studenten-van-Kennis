@@ -44,7 +44,7 @@ export default function Home() {
               { count: boekenCount },
               { count: lessenCount },
             ] = await Promise.all([
-              supabase.from("users").select("*", { count: "exact", head: true }),
+              supabase.from("profielen").select("*", { count: "exact", head: true }).eq("rol", "student"),
               supabase.from("boeken").select("*", { count: "exact", head: true }),
               supabase.from("lessen").select("*", { count: "exact", head: true }),
             ]);
@@ -68,9 +68,10 @@ export default function Home() {
               .slice(0, 5);
 
             const { data: newUsers } = await supabase
-              .from("users")
+              .from("profielen")
               .select("*")
               .order("created_at", { ascending: false })
+              .eq("rol", "student")
               .limit(5);
 
             setStats({ usersCount, boekenCount, lessenCount });
@@ -243,7 +244,7 @@ export default function Home() {
           <section>
             <h2 className="text-xl font-semibold mb-2">📝 Mijn Notities</h2>
             <div className="grid gap-4 md:grid-cols-2">
-              {notities.map((n) => (
+              {notities?.map((n) => (
                 <Card key={n.id}>
                   <CardContent className="p-4">
                     <h3 className="font-medium">{n.les.titel}</h3>
