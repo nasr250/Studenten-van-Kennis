@@ -44,6 +44,7 @@ export default function Navigation() {
       <Link href="/">Home</Link>
       <Link href="/mijn-boeken">Mijn Boeken</Link>
       <Link href="/voortgang">Voortgang</Link>
+      <Link href="/profiel">Profiel</Link>
 
       {/* Controleer hier of de gebruiker een admin is */}
       {isAdmin && (
