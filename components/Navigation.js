@@ -48,7 +48,7 @@ export default function Navigation() {
       {/* Controleer hier of de gebruiker een admin is */}
       {isAdmin && (
         <>
-          <Link href="/admin-dashboard">Admin Dashboard</Link>
+          <Link href="/admin/boekenbeheer">Boekenbeheer</Link>
           <Link href="/admin/toetsbeheer">Toetsbeheer</Link>
         </>
       )}

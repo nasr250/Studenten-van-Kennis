@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-import { supabase } from "../lib/supabase";
+import { supabase } from "../../lib/supabase";
 import { useRouter } from "next/router";
 import { DataGrid } from "@mui/x-data-grid";
 import { Button, Box } from "@mui/material";
-import styles from "../styles/Admin.module.css";
+import styles from "../../styles/Admin.module.css";
 
-export default function AdminDashboard() {
+export default function BoekenBeheer() {
   const [user, setUser] = useState(null);
   const [boeken, setBoeken] = useState([]);
   const router = useRouter();
@@ -116,7 +116,7 @@ export default function AdminDashboard() {
 
   return (
     <div className={styles.container}>
-      <h1>Admin Dashboard</h1>
+      <h1>Boekenbeheer</h1>
 
       <Box sx={{ height: 650, width: "100%", marginBottom: 2 }}>
         <DataGrid
