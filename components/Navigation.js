@@ -42,7 +42,7 @@ export default function Navigation() {
   return (
     <nav className={styles.nav}>
       <Link href="/">Home</Link>
-      <Link href="/mijn-boeken">Mijn Boeken</Link>
+      <Link href="/catalogus">Catalogus</Link>
       <Link href="/voortgang">Voortgang</Link>
       <Link href="/profiel">Profiel</Link>
 

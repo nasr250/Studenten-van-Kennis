@@ -34,49 +34,35 @@ export default function VoortgangPage() {
     if (!userId) return;
 
     try {
-      console.log("Fetching lessenreeksen...");
       const { data: lessenreeksen } = await supabase.from("lessenreeksen").select("*");
-      console.log("Lessenreeksen fetched:", lessenreeksen);
 
-      console.log("Fetching voortgang...");
       const { data: voortgang } = await supabase
-        .from("voortgang")
-        .select("*")
-        .eq("gebruiker_id", userId);
-      console.log("Voortgang fetched:", voortgang);
+      .from("voortgang")
+      .select("*")
+      .eq("gebruiker_id", userId);
 
-      console.log("Fetching notities...");
       const { data: notities } = await supabase
         .from("les_notities")
         .select("les_id, notitie")
         .eq("gebruiker_id", userId);
-      console.log("Notities fetched:", notities);
 
-      console.log("Fetching toetsen...");
       const { data: toetsen } = await supabase
         .from("toetsen")
         .select("id, type, les_id, lessenreeks_id, titel");
-      console.log("Toetsen fetched:", toetsen);
 
-      console.log("Fetching lessen...");
       const { data: lessen } = await supabase
         .from("lessen")
         .select("id, lessenreeks_id");
-      console.log("Lessen fetched:", lessen);
 
-      console.log("Fetching toetsresultaten...");
       const { data: resultaten } = await supabase
         .from("toets_resultaten")
         .select("toets_id, score, totaal_vragen, voltooid_op")
         .eq("gebruiker_id", userId);
-      console.log("Toetsresultaten fetched:", resultaten);
 
-      console.log("Combining data per lessenreeks...");
       const dataPerLessenreeks = lessenreeksen.map((lessenreeks) => {
         // Filter lessen die bij deze lessenreeks horen
         const lessenInReeks = lessen.filter((les) => les.lessenreeks_id === lessenreeks.id);
 
-        console.log("Lessen in reeks:", lessenInReeks);
         // Filter voortgang voor lessen in deze lessenreeks
         const voortgangInReeks = voortgang.filter((v) =>
             v.bekeken_lessons &&
@@ -84,7 +70,6 @@ export default function VoortgangPage() {
             v.lessenreeks_id === lessenreeks.id && // Ensure it matches the specific series
             v.bekeken_lessons.some((lesId) => lessenInReeks.some((les) => les.id === lesId))
         );
-        console.log("Voortgang in reeks:", voortgangInReeks);
         // Check if any lesson in the series has been viewed
         const gestart = voortgangInReeks.some((v) => v.bekeken_lessons.length > 0);
         
@@ -119,7 +104,6 @@ export default function VoortgangPage() {
         };
       });
 
-      console.log("Final data per lessenreeks:", dataPerLessenreeks);
       setVoortgangData(dataPerLessenreeks);
       setLoading(false);
     } catch (error) {

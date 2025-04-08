@@ -1,4 +1,3 @@
-
 .container {
   max-width: 1200px;
   margin: 0 auto;
@@ -20,10 +19,12 @@
   padding: 1.5rem;
   box-shadow: 0 2px 4px var(--shadow-color);
   transition: transform 0.2s;
+  border: 2px solid var(--primary-color); /* Toevoegen van een border */
 }
 
 .card:hover {
   transform: translateY(-5px);
+  border-color: var(--primary-hover); /* Borderkleur verandert bij hover */
 }
 
 .categorie {
