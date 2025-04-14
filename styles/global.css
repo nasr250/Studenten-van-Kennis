@@ -1,4 +1,3 @@
-
 :root {
   --primary-color: #16A085;
   --primary-hover: #1ABC9C;
@@ -36,7 +35,6 @@ body {
 }
 
 .container {
-  width: 100%;
   max-width: 1200px;
   margin: 0 auto;
   padding: var(--spacing-lg);
@@ -53,6 +51,7 @@ body {
   padding: var(--spacing-lg);
   border-radius: var(--border-radius);
   box-shadow: var(--shadow);
+  margin-bottom: var(--spacing-md);
 }
 
 .btn {
@@ -86,4 +85,15 @@ input, textarea {
   border-radius: var(--border-radius);
   margin-bottom: var(--spacing-md);
   font-size: 1rem;
+}
+.progress {
+  font-size: 1.2rem;
+  margin-bottom: var(--spacing-md);
+  color: var(--primary-color);
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
 }

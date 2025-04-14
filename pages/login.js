@@ -8,6 +8,7 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
   const [isRegistering, setIsRegistering] = useState(false);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
   const router = useRouter();
 
   const handleLogin = async (e) => {
@@ -39,10 +40,37 @@ export default function Login() {
     }
   };
 
+  const handlePasswordReset = async (e) => {
+    e.preventDefault();
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      if (error) throw error;
+      alert("Een e-mail om je wachtwoord te resetten is verzonden.");
+      setIsResettingPassword(false);
+    } catch (error) {
+      setError(error.message);
+    }
+  };
+
   return (
     <div className={styles.container}>
-      <form onSubmit={isRegistering ? handleRegister : handleLogin} className={styles.form}>
-        <h1>{isRegistering ? "Registreren" : "Login"}</h1>
+      <form
+        onSubmit={
+          isResettingPassword
+            ? handlePasswordReset
+            : isRegistering
+            ? handleRegister
+            : handleLogin
+        }
+        className={styles.form}
+      >
+        <h1>
+          {isResettingPassword
+            ? "Wachtwoord Reset"
+            : isRegistering
+            ? "Registreren"
+            : "Login"}
+        </h1>
         {error && <div className={styles.error}>{error}</div>}
         <input
           type="email"
@@ -50,25 +78,63 @@ export default function Login() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
-        <input
-          type="password"
-          placeholder="Wachtwoord"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-        <button type="submit">{isRegistering ? "Registreren" : "Inloggen"}</button>
-        <p>
-          {isRegistering ? "Heb je al een account?" : "Nog geen account?"}{" "}
-          <span
-            onClick={() => {
-              setIsRegistering(!isRegistering);
-              setError(null);
-            }}
-            style={{ color: "blue", cursor: "pointer" }}
-          >
-            {isRegistering ? "Inloggen" : "Registreren"}
-          </span>
-        </p>
+        {!isResettingPassword && !isRegistering && (
+          <input
+            type="password"
+            placeholder="Wachtwoord"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        )}
+        <button type="submit">
+          {isResettingPassword
+            ? "Reset Wachtwoord"
+            : isRegistering
+            ? "Registreren"
+            : "Inloggen"}
+        </button>
+        {!isResettingPassword && (
+          <p>
+            {isRegistering
+              ? "Heb je al een account?"
+              : "Nog geen account?"}{" "}
+            <span
+              onClick={() => {
+                setIsRegistering(!isRegistering);
+                setError(null);
+              }}
+              style={{ color: "blue", cursor: "pointer" }}
+            >
+              {isRegistering ? "Inloggen" : "Registreren"}
+            </span>
+          </p>
+        )}
+        {!isRegistering && !isResettingPassword && (
+          <p>
+            <span
+              onClick={() => {
+                setIsResettingPassword(true);
+                setError(null);
+              }}
+              style={{ color: "blue", cursor: "pointer" }}
+            >
+              Wachtwoord vergeten?
+            </span>
+          </p>
+        )}
+        {isResettingPassword && (
+          <p>
+            <span
+              onClick={() => {
+                setIsResettingPassword(false);
+                setError(null);
+              }}
+              style={{ color: "blue", cursor: "pointer" }}
+            >
+              Terug naar inloggen
+            </span>
+          </p>
+        )}
       </form>
     </div>
   );

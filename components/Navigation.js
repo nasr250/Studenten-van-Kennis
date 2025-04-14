@@ -8,6 +8,7 @@ export default function Navigation() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true); // Toevoegen om te controleren of de gebruiker geladen is
   const router = useRouter();
+  const [showAdminMenu, setShowAdminMenu] = useState(false);
 
   useEffect(() => {
     // Haal de ingelogde gebruiker op en kijk of ze admin zijn
@@ -16,7 +17,7 @@ export default function Navigation() {
         data: { user },
       } = await supabase.auth.getUser();
 
-      const { data: adminData, error } = await supabase
+      const { data: adminData, error} = await supabase
         .from("admins")
         .select("*")
         .eq("user_id", user.id)
@@ -40,20 +41,30 @@ export default function Navigation() {
   if (loading) return null; // Wacht tot de gebruiker geladen is voordat de UI wordt weergegeven
 
   return (
-    <nav className={styles.nav}>
+  <nav className={styles.nav}>
       <Link href="/">Home</Link>
       <Link href="/catalogus">Catalogus</Link>
+      <Link href="/leerpad">Leerpad</Link>
       <Link href="/voortgang">Voortgang</Link>
       <Link href="/profiel">Profiel</Link>
 
-      {/* Controleer hier of de gebruiker een admin is */}
       {isAdmin && (
-        <>
-          <Link href="/admin/boekenbeheer">Boekenbeheer</Link>
-          <Link href="/admin/toetsbeheer">Toetsbeheer</Link>
-        </>
+        <div className={styles.dropdown}>
+          <button
+            className={styles.dropdownToggle}
+            onClick={() => setShowAdminMenu((prev) => !prev)}
+          >
+            Admin ▾
+          </button>
+          {showAdminMenu && (
+            <div className={styles.dropdownMenu}>
+              <Link href="/admin/leerpadbeheer">Leerpadbeheer</Link>
+              <Link href="/admin/boekenbeheer">Boekenbeheer</Link>
+              <Link href="/admin/toetsbeheer">Toetsbeheer</Link>
+            </div>
+          )}
+        </div>
       )}
-
       <button onClick={handleLogout}>Uitloggen</button>
     </nav>
   );
