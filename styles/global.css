@@ -97,3 +97,15 @@ input, textarea {
   align-items: center;
   gap: var(--spacing-sm);
 }
+
+ul {
+  list-style: none;
+  padding-left: 0; /* optioneel, om inspringing te verwijderen */
+}
+
+.leerpadgrid {
+  display: grid;
+  justify-content: start;
+  width: 50%;
+  gap: 1rem;
+}

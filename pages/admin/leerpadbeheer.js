@@ -6,7 +6,8 @@ export default function LeerpadenBeheer() {
   const [leerpaden, setLeerpaden] = useState([]);
   const [boeken, setBoeken] = useState([]);
   const [geselecteerdeBoeken, setGeselecteerdeBoeken] = useState([]);
-  const [nieuwLeerpad, setNieuwLeerpad] = useState({ titel: "", beschrijving: "" });
+  const [nieuwLeerpad, setNieuwLeerpad] = useState({titel: "", beschrijving: "" });
+  const [bewerken, setBewerken] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -31,6 +32,7 @@ export default function LeerpadenBeheer() {
   }, []);
 
   const handleSaveLeerpad = async () => {
+    console.log("Opslaan leerpad met data:", nieuwLeerpad, geselecteerdeBoeken);
     const { data: nieuwLeerpadData, error } = await supabase
       .from("leerpad")
       .insert(nieuwLeerpad)
@@ -57,7 +59,7 @@ export default function LeerpadenBeheer() {
     } else {
       alert("Leerpad succesvol aangemaakt!");
       setLeerpaden([...leerpaden, nieuwLeerpadData]);
-      setNieuwLeerpad({ titel: "", beschrijving: "" });
+      setNieuwLeerpad({id: "", titel: "", beschrijving: "" });
       setGeselecteerdeBoeken([]);
     }
   };
@@ -89,11 +91,95 @@ export default function LeerpadenBeheer() {
     }
   };
 
+  const handleBoekVerwijderen = (boekId) => {
+    setGeselecteerdeBoeken(geselecteerdeBoeken.filter((boek) => boek.id !== boekId));
+  };
+
+  const bewerkLeerpad = async (leerpadId) => {
+    const { data: leerpadData, error } = await supabase
+      .from("leerpad")
+      .select("*")
+      .eq("id", leerpadId)
+      .single();
+    if (error) {
+      console.error("Fout bij ophalen leerpad:", error);
+      return;
+    }
+    // Haal gekoppelde boeken op
+    const { data: boekenData, error: boekenError } = await supabase
+      .from("leerpad_boeken")
+      .select("boek_id, boeken(*)")
+      .eq("leerpad_id", leerpadId)
+      .order("volgorde_nummer", { ascending: true });
+
+    if (boekenError) {
+      console.error("Fout bij ophalen boeken van leerpad:", boekenError);
+      return;
+    }
+
+    setNieuwLeerpad({
+      id: leerpadData.id,
+      titel: leerpadData.titel,
+      beschrijving: leerpadData.beschrijving,
+    });
+
+    // Zet geselecteerde boeken op basis van gekoppelde boeken
+    setGeselecteerdeBoeken(
+      boekenData.map((item) => item.boeken)
+    );
+  };
+  
+  const handleUpdateLeerpad = async () => {
+    console.log("Update leerpad met data:", nieuwLeerpad, geselecteerdeBoeken);
+    const { data: updatedLeerpad, error } = await supabase
+      .from("leerpad")
+      .update(nieuwLeerpad)
+      .eq("id", nieuwLeerpad.id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Fout bij updaten leerpad:", error);
+      return;
+    }
+    // 1. Verwijder oude koppelingen die niet meer geselecteerd zijn
+    const huidigeBoekIds = geselecteerdeBoeken.map(boek => boek.id);
+
+    await supabase
+      .from("leerpad_boeken")
+      .delete()
+      .match({ leerpad_id: updatedLeerpad.id })
+      .not('boek_id', 'in', `(${huidigeBoekIds.join(',')})`);
+
+    // 2. Upsert de huidige selectie
+    const leerpadBoeken = geselecteerdeBoeken.map((boek, index) => ({
+      leerpad_id: updatedLeerpad.id,
+      boek_id: boek.id,
+      volgorde_nummer: index + 1,
+    }));
+    
+    const { error: boekenError } = await supabase
+      .from("leerpad_boeken")
+      .upsert(leerpadBoeken);
+
+
+    // Update leerpaden lijst
+    setLeerpaden(
+      leerpaden.map((lp) =>
+        lp.id === updatedLeerpad.id ? updatedLeerpad : lp
+      )
+    );
+    alert("Leerpad succesvol bijgewerkt!");
+    setBewerken(false);
+    setNieuwLeerpad({titel: "", beschrijving: "" });
+    setGeselecteerdeBoeken([]);
+  };
+
   return (
     <div className="container">
       <h1>Leerpaden Beheer</h1>
       <div className="card">
-        <h2>Nieuw Leerpad</h2>
+        {bewerken ? (<h2>Bewerken Leerpad</h2>) : (<h2>Nieuw Leerpad</h2>)}
         <input
           type="text"
           placeholder="Titel"
@@ -108,7 +194,7 @@ export default function LeerpadenBeheer() {
           }
         />
         <h3>Beschikbare Boeken</h3>
-        <ul className="grid">
+        <ul className= 'leerpadgrid'>
           {boeken.map((boek) => (
             <li key={boek.id} className="card">
               <p>{boek.titel}</p>
@@ -123,7 +209,7 @@ export default function LeerpadenBeheer() {
           <Droppable droppableId="boekenLijst">
             {(provided) => (
               <ul
-                className="grid"
+                className='leerpadgrid'
                 {...provided.droppableProps}
                 ref={provided.innerRef}
               >
@@ -137,6 +223,9 @@ export default function LeerpadenBeheer() {
                         {...provided.dragHandleProps}
                       >
                         <p>{boek.titel}</p>
+                        <button className="btn" onClick={() => handleBoekVerwijderen(boek.id)}>
+                          Verwijderen
+                        </button>
                       </li>
                     )}
                   </Draggable>
@@ -146,9 +235,17 @@ export default function LeerpadenBeheer() {
             )}
           </Droppable>
         </DragDropContext>
-        <button className="btn" onClick={handleSaveLeerpad}>
+        { bewerken ? (<>
+          <button className="btn" onClick={() => { setBewerken(false); setNieuwLeerpad({ titel: "", beschrijving: "" }); setGeselecteerdeBoeken([]); }}>
+            Annuleren
+          </button>
+          <button className="btn" onClick={() => handleUpdateLeerpad() }>
+            Opslaan
+          </button></>
+        ) : <button className="btn" onClick={handleSaveLeerpad}>
           Opslaan
-        </button>
+        </button>}
+        
       </div>
 
       <h2>Bestaande Leerpaden</h2>
@@ -159,6 +256,9 @@ export default function LeerpadenBeheer() {
             <p>{leerpad.beschrijving}</p>
             <button className="btn" onClick={() => handleDeleteLeerpad(leerpad.id)}>
               Verwijderen
+            </button>
+            <button className="btn" onClick={() => { setBewerken(true); bewerkLeerpad(leerpad.id); }}>
+              Bewerken
             </button>
           </li>
         ))}

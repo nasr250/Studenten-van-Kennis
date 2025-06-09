@@ -7,6 +7,7 @@ export default function LeerpadAanmelden() {
   const [boeken, setBoeken] = useState([]);
   const [voortgang, setVoortgang] = useState({});
   const [user, setUser] = useState(null);
+  const [aangemeldeLeerpaden, setAangemeldeLeerpaden] = useState([]);
 
   useEffect(() => {
     const fetchLeerpaden = async () => {
@@ -20,8 +21,20 @@ export default function LeerpadAanmelden() {
       setUser(user);
     };
 
+    const fetchAangemeldeLeerpaden = async () => {
+      if (!user) return;
+      const { data, error } = await supabase
+        .from("leerpad_inschrijvingen")
+        .select("leerpad_id")
+        .eq("gebruiker_id", user.id);
+
+      if (error) console.error("Fout bij ophalen aangemelde leerpaden:", error);
+      else setAangemeldeLeerpaden(data);
+    };
+
     fetchLeerpaden();
     fetchUser();
+    fetchAangemeldeLeerpaden();
   }, []);
 
   const handleAanmelden = async (leerpadId) => {
@@ -40,6 +53,13 @@ export default function LeerpadAanmelden() {
     } else {
       alert("Succesvol aangemeld!");
     }
+    // Herlaad de aangemelde leerpaden
+    const { data } = await supabase
+      .from("leerpad_inschrijvingen")
+      .select("leerpad_id")
+      .eq("gebruiker_id", user.id);
+    setAangemeldeLeerpaden(data);
+    // Reset de geselecteerde leerpad
   };
 
   const fetchBoekenVoorLeerpad = async (leerpadId) => {
@@ -57,14 +77,6 @@ export default function LeerpadAanmelden() {
     }
   };
 
-  const handleAfvinken = async (boekId) => {
-    const nieuweVoortgang = { ...voortgang, [boekId]: !voortgang[boekId] };
-    setVoortgang(nieuweVoortgang);
-
-    // Optioneel: Sla voortgang op in de database
-    // await supabase.from("voortgang").upsert({ gebruiker_id: user.id, boek_id: boekId, voltooid: nieuweVoortgang[boekId] });
-  };
-
   const berekenVoortgang = () => {
     const totaal = boeken.length;
     const voltooid = boeken.filter((boek) => voortgang[boek.boek_id]).length;
@@ -73,8 +85,9 @@ export default function LeerpadAanmelden() {
 
   return (
     <div className="container">
-      <h1>Beschikbare Leerpaden</h1>
       {!geselecteerdLeerpad ? (
+        <>
+        <h1>Beschikbare Leerpaden</h1>
         <ul className="grid">
           {leerpaden.map((lp) => (
             <li key={lp.id} className="card">
@@ -89,23 +102,31 @@ export default function LeerpadAanmelden() {
             </li>
           ))}
         </ul>
+        <h2>Aangemelde Leerpaden</h2>
+        <ul className="grid">
+          {aangemeldeLeerpaden.map((inschrijving) => {
+            const leerpad = leerpaden.find(lp => lp.id === inschrijving.leerpad_id);
+            return (
+              <li key={inschrijving.leerpad_id} className="card">
+                <h2>{leerpad ? leerpad.titel : "Onbekend Leerpad"}</h2>
+                <button className="btn" onClick={() => fetchBoekenVoorLeerpad(inschrijving.leerpad_id)}>
+                  Bekijk Leerpad
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+        </>
       ) : (
         <div>
           <h2>{geselecteerdLeerpad.titel}</h2>
           <p>{geselecteerdLeerpad.beschrijving}</p>
           <h3>Voortgang: {berekenVoortgang()}%</h3>
-          <ul className="grid">
-            {boeken.map((boek) => (
+          <ul className="leerpadgrid">
+            {boeken.map((boek, idx) => (
               <li key={boek.boek_id} className="card">
-                <h4>{boek.boeken.titel}</h4>
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={voortgang[boek.boek_id] || false}
-                    onChange={() => handleAfvinken(boek.boek_id)}
-                  />
-                  Afgevinkt
-                </label>
+                <span style={{ fontWeight: "bold", marginRight: 8 }}>{idx + 1}.</span>
+                <h4 style={{ display: "inline" }}>{boek.boeken.titel}</h4>
               </li>
             ))}
           </ul>
@@ -114,6 +135,7 @@ export default function LeerpadAanmelden() {
           </button>
         </div>
       )}
+      
     </div>
   );
 }
