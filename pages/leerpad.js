@@ -147,7 +147,12 @@ export default function LeerpadAanmelden() {
         <div>
           <h2>{geselecteerdLeerpad.titel}</h2>
           <p>{geselecteerdLeerpad.beschrijving}</p>
-          <h3>Voortgang: {berekenVoortgang()}%</h3>
+          {/* Alleen voortgang tonen als het een aangemelde leerpad is */}
+          {aangemeldeLeerpaden.some(
+            (inschrijving) => inschrijving.leerpad_id === geselecteerdLeerpad.id
+          ) && (
+            <h3>Voortgang: {berekenVoortgang()}%</h3>
+          )}
           <ul className="leerpadgrid">
             {boeken.map((boek, idx) => (
               <li key={boek.boek_id} className="card">
