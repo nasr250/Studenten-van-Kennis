@@ -213,7 +213,7 @@ export default function BookEditPage() {
         const { error } = await supabase.from("boeken").insert(boek);
         if (error) throw error;
         alert("Boek succesvol aangemaakt!");
-        router.push("/admin/boeken");
+        router.push("/admin/boekenbeheer");
       } else {
         const { error } = await supabase.from("boeken").update(boek).eq("id", id);
         if (error) throw error;

@@ -4,9 +4,10 @@ import { useRouter } from "next/router";
 import { DataGrid } from "@mui/x-data-grid";
 import { Button, Box } from "@mui/material";
 import styles from "../../styles/Admin.module.css";
+import { useUser } from "../../context/UserContext"; // <-- voeg deze regel toe
 
 export default function BoekenBeheer() {
-  const [user, setUser] = useState(null);
+  const user = useUser(); // <-- gebruik context
   const [boeken, setBoeken] = useState([]);
   const router = useRouter();
 
@@ -50,13 +51,7 @@ export default function BoekenBeheer() {
 
   useEffect(() => {
     const init = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        router.push("/login");
-        return;
-      }
+      if (!user) return; // wacht tot user geladen is
 
       const { data: adminData } = await supabase
         .from("admins")
@@ -69,11 +64,10 @@ export default function BoekenBeheer() {
         return;
       }
 
-      setUser(user);
       loadBoeken();
     };
     init();
-  }, []);
+  }, [user]); // user als dependency
 
   const loadBoeken = async () => {
     const { data, error } = await supabase
@@ -92,7 +86,6 @@ export default function BoekenBeheer() {
     if (error) {
       console.error("Error loading books:", error);
     } else {
-      console.log("Loaded books:", data);
       setBoeken(data || []);
     }
   };
