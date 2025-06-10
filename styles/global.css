@@ -68,6 +68,10 @@ body {
   background: var(--primary-hover);
 }
 
+.btn + .btn {
+  margin-left: var(--spacing-sm);
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));

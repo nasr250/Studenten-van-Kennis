@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import { supabase } from "../lib/supabase";
 import "../styles/global.css";
 import Navigation from "../components/Navigation";
+import { UserProvider } from "../context/UserContext";
 
 export default function App({ Component, pageProps }) {
   const [user, setUser] = useState(null);
@@ -55,7 +56,7 @@ export default function App({ Component, pageProps }) {
   }
 
   return (
-    <>
+    <UserProvider>
       {user ? (
         <>
           {!isLoginPage && <Navigation />}
@@ -64,6 +65,6 @@ export default function App({ Component, pageProps }) {
       ) : (
         <Component {...pageProps} />
       )}
-    </>
+    </UserProvider>
   );
 }

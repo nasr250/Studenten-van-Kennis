@@ -1,28 +1,25 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
+import { useUser } from "../context/UserContext";
 
 export default function LeerpadAanmelden() {
   const [leerpaden, setLeerpaden] = useState([]);
   const [geselecteerdLeerpad, setGeselecteerdLeerpad] = useState(null);
   const [boeken, setBoeken] = useState([]);
   const [voortgang, setVoortgang] = useState({});
-  const [user, setUser] = useState(null);
+  const user = useUser();
   const [aangemeldeLeerpaden, setAangemeldeLeerpaden] = useState([]);
 
   useEffect(() => {
+    if (!user) return; // Wacht tot user geladen is
+
     const fetchLeerpaden = async () => {
       const { data, error } = await supabase.from("leerpad").select("*");
       if (error) console.error("Fout bij ophalen leerpaden:", error);
       else setLeerpaden(data);
     };
 
-    const fetchUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-    };
-
     const fetchAangemeldeLeerpaden = async () => {
-      if (!user) return;
       const { data, error } = await supabase
         .from("leerpad_inschrijvingen")
         .select("leerpad_id")
@@ -33,15 +30,10 @@ export default function LeerpadAanmelden() {
     };
 
     fetchLeerpaden();
-    fetchUser();
     fetchAangemeldeLeerpaden();
-  }, []);
+  }, [user]); // <-- user als dependency
 
   const handleAanmelden = async (leerpadId) => {
-    if (!user) {
-      alert("Je moet ingelogd zijn om je aan te melden.");
-      return;
-    }
 
     const { error } = await supabase.from("leerpad_inschrijvingen").insert({
       gebruiker_id: user.id,
@@ -82,6 +74,25 @@ export default function LeerpadAanmelden() {
     const voltooid = boeken.filter((boek) => voortgang[boek.boek_id]).length;
     return totaal > 0 ? Math.round((voltooid / totaal) * 100) : 0;
   };
+  
+  const handleAfmelden = async (leerpadId) => {
+  const { error } = await supabase
+    .from("leerpad_inschrijvingen")
+    .delete()
+    .eq("gebruiker_id", user.id)
+    .eq("leerpad_id", leerpadId);
+
+  if (error) {
+    console.error("Fout bij afmelden:", error);
+  } else {
+    // Herlaad de aangemelde leerpaden
+    const { data } = await supabase
+      .from("leerpad_inschrijvingen")
+      .select("leerpad_id")
+      .eq("gebruiker_id", user.id);
+    setAangemeldeLeerpaden(data);
+  }
+};
 
   return (
     <div className="container">
@@ -89,18 +100,30 @@ export default function LeerpadAanmelden() {
         <>
         <h1>Beschikbare Leerpaden</h1>
         <ul className="grid">
-          {leerpaden.map((lp) => (
-            <li key={lp.id} className="card">
-              <h2>{lp.titel}</h2>
-              <p>{lp.beschrijving}</p>
-              <button className="btn" onClick={() => fetchBoekenVoorLeerpad(lp.id)}>
-                Bekijk Leerpad
-              </button>
-              <button className="btn" onClick={() => handleAanmelden(lp.id)}>
-                Aanmelden
-              </button>
-            </li>
-          ))}
+          {leerpaden.map((lp) => {
+            const alIngeschreven = aangemeldeLeerpaden.some(
+              (inschrijving) => inschrijving.leerpad_id === lp.id
+            );
+            return (
+              <>{alIngeschreven ? <></> :               
+              <li key={lp.id} className="card">
+                <h2>{lp.titel}</h2>
+                <p>{lp.beschrijving}</p>
+                <button className="btn" onClick={() => fetchBoekenVoorLeerpad(lp.id)}>
+                  Bekijk Leerpad
+                </button>
+                <button
+                  className="btn"
+                  onClick={() => handleAanmelden(lp.id)}
+                  disabled={alIngeschreven}
+                >
+                  Aanmelden
+                </button>
+              </li>}
+
+              </>
+            );
+          })}
         </ul>
         <h2>Aangemelde Leerpaden</h2>
         <ul className="grid">
@@ -111,6 +134,9 @@ export default function LeerpadAanmelden() {
                 <h2>{leerpad ? leerpad.titel : "Onbekend Leerpad"}</h2>
                 <button className="btn" onClick={() => fetchBoekenVoorLeerpad(inschrijving.leerpad_id)}>
                   Bekijk Leerpad
+                </button>
+                <button className="btn" onClick={() => handleAfmelden(inschrijving.leerpad_id)}>
+                 Afmelden
                 </button>
               </li>
             );
