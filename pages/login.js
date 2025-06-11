@@ -6,6 +6,7 @@ import styles from "../styles/Login.module.css";
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [repeatPassword, setRepeatPassword] = useState(""); // toegevoegd
   const [error, setError] = useState(null);
   const [isRegistering, setIsRegistering] = useState(false);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
@@ -27,6 +28,10 @@ export default function Login() {
 
   const handleRegister = async (e) => {
     e.preventDefault();
+    if (password !== repeatPassword) {
+      setError("Wachtwoorden komen niet overeen.");
+      return;
+    }
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -35,6 +40,8 @@ export default function Login() {
       if (error) throw error;
       alert("Registratie succesvol! Controleer je e-mail om je account te bevestigen.");
       setIsRegistering(false);
+      setPassword("");
+      setRepeatPassword("");
     } catch (error) {
       setError(error.message);
     }
@@ -78,13 +85,23 @@ export default function Login() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
-        {!isResettingPassword && !isRegistering && (
-          <input
-            type="password"
-            placeholder="Wachtwoord"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
+        {!isResettingPassword && (
+          <>
+            <input
+              type="password"
+              placeholder="Wachtwoord"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            {isRegistering && (
+              <input
+                type="password"
+                placeholder="Herhaal wachtwoord"
+                value={repeatPassword}
+                onChange={(e) => setRepeatPassword(e.target.value)}
+              />
+            )}
+          </>
         )}
         <button type="submit">
           {isResettingPassword
@@ -102,6 +119,8 @@ export default function Login() {
               onClick={() => {
                 setIsRegistering(!isRegistering);
                 setError(null);
+                setPassword("");
+                setRepeatPassword("");
               }}
               style={{ color: "blue", cursor: "pointer" }}
             >
