@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import { useUser } from "../context/UserContext";
+import { useRouter } from "next/router";
+import styles from "../styles/Leerpad.module.css"; // Voeg je eigen CSS toe
 
 export default function LeerpadAanmelden() {
   const [leerpaden, setLeerpaden] = useState([]);
@@ -9,6 +11,7 @@ export default function LeerpadAanmelden() {
   const [voortgang, setVoortgang] = useState({});
   const user = useUser();
   const [aangemeldeLeerpaden, setAangemeldeLeerpaden] = useState([]);
+  const router = useRouter();
 
   useEffect(() => {
     if (!user) return; // Wacht tot user geladen is
@@ -94,6 +97,11 @@ export default function LeerpadAanmelden() {
   }
 };
 
+const handleBoekClick = (boekId) => {
+  router.push(`/boeken/${boekId}`);
+  setGeselecteerdLeerpad(null); // Reset geselecteerde leerpad na boekselectie
+  }
+
   return (
     <div className="container">
       {!geselecteerdLeerpad ? (
@@ -154,12 +162,45 @@ export default function LeerpadAanmelden() {
             <h3>Voortgang: {berekenVoortgang()}%</h3>
           )}
           <ul className="leerpadgrid">
-            {boeken.map((boek, idx) => (
-              <li key={boek.boek_id} className="card">
-                <span style={{ fontWeight: "bold", marginRight: 8 }}>{idx + 1}.</span>
-                <h4 style={{ display: "inline" }}>{boek.boeken.titel}</h4>
-              </li>
-            ))}
+            {boeken.map((boek, idx) => {
+              // Check of gebruiker is aangemeld voor dit leerpad
+              const isAangemeld = aangemeldeLeerpaden.some(
+                (inschrijving) => inschrijving.leerpad_id === geselecteerdLeerpad.id
+              );
+
+              let boekClass = "card";
+              let isVoltooid = false;
+              let isActief = false;
+              let isGesloten = false;
+
+              if (isAangemeld) {
+                isVoltooid = voortgang[boek.boek_id];
+                const eersteOnvoltooidIndex = boeken.findIndex(
+                  (b) => !voortgang[b.boek_id]
+                );
+                isActief = idx === eersteOnvoltooidIndex;
+                isGesloten = idx > eersteOnvoltooidIndex;
+
+                if (isVoltooid) boekClass += ` ${styles.voltooid}`;
+                else if (isActief) boekClass += ` ${styles.actief}`;
+                else if (isGesloten) boekClass += ` ${styles.gesloten}`;
+              }
+
+              return (
+                <li
+                  key={boek.boek_id}
+                  className={boekClass}
+                  onClick={() => handleBoekClick(boek.boek_id)}
+                  style={{ cursor: "pointer" }}
+                >
+                  <span style={{ fontWeight: "bold", marginRight: 8 }}>{idx + 1}.</span>
+                  <h4 style={{ display: "inline" }}>{boek.boeken.titel}</h4>
+                  {isAangemeld && isGesloten && (
+                    <span className={styles.slotje} title="Nog niet beschikbaar">🔒</span>
+                  )}
+                </li>
+              );
+            })}
           </ul>
           <button className="btn" onClick={() => setGeselecteerdLeerpad(null)}>
             Terug naar overzicht

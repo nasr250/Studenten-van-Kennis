@@ -53,6 +53,9 @@ body {
   box-shadow: var(--shadow);
   margin-bottom: var(--spacing-md);
 }
+.card:hover {
+  box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
+}
 
 .btn {
   background: var(--primary-color);
