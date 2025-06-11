@@ -58,9 +58,15 @@ export default function Navigation() {
           </button>
           {showAdminMenu && (
             <div className={styles.dropdownMenu}>
-              <Link href="/admin/leerpadbeheer">Leerpadbeheer</Link>
-              <Link href="/admin/boekenbeheer">Boekenbeheer</Link>
-              <Link href="/admin/toetsbeheer">Toetsbeheer</Link>
+              <Link href="/admin/leerpadbeheer" onClick={() => setShowAdminMenu(false)}>
+                Leerpadbeheer
+              </Link>
+              <Link href="/admin/boekenbeheer" onClick={() => setShowAdminMenu(false)}>
+                Boekenbeheer
+              </Link>
+              <Link href="/admin/toetsbeheer" onClick={() => setShowAdminMenu(false)}>
+                Toetsbeheer
+              </Link>
             </div>
           )}
         </div>
