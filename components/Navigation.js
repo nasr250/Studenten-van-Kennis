@@ -45,6 +45,7 @@ export default function Navigation() {
       <Link href="/">Home</Link>
       <Link href="/catalogus">Catalogus</Link>
       <Link href="/leerpad">Leerpad</Link>
+      <Link href="/mijn-bibliotheek">Mijn Bibliotheek</Link>
       <Link href="/voortgang">Voortgang</Link>
       <Link href="/profiel">Profiel</Link>
 

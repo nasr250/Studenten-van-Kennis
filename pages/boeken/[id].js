@@ -13,6 +13,8 @@ export default function BookPage() {
   const [voortgang, setVoortgang] = useState({});
   const [user, setUser] = useState(null);
   const [allLessonsCompleted, setAllLessonsCompleted] = useState(false);
+  const [inBibliotheek, setInBibliotheek] = useState(false);
+  const [showVerwijderPopup, setShowVerwijderPopup] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user));
@@ -63,6 +65,20 @@ export default function BookPage() {
 
     fetchData();
   }, [id, user]);
+
+  useEffect(() => {
+    if (!user || !boek) return;
+    const checkBibliotheek = async () => {
+      const { data } = await supabase
+        .from("mijn_bibliotheek")
+        .select("boek_id")
+        .eq("gebruiker_id", user.id)
+        .eq("boek_id", boek.id)
+        .single();
+      setInBibliotheek(!!data);
+    };
+    checkBibliotheek();
+  }, [user, boek]);
 
   const handleSelectLessenreeks = async (lessenreeksId) => {
     setSelectedLessenreeks(lessenreeksId);
@@ -157,6 +173,110 @@ export default function BookPage() {
           >
             🔗 Boek Aanschaffen
           </a>
+        )}
+        {inBibliotheek ? (
+          <>
+            <button
+              className={`${styles.button} verwijder-knop`}
+              style={{ marginLeft: "10px" }}
+              onClick={() => setShowVerwijderPopup(true)}
+            >
+              ❌ Verwijder uit mijn bibliotheek
+            </button>
+            {showVerwijderPopup && (
+              <div
+                style={{
+                  position: "fixed",
+                  top: 0,
+                  left: 0,
+                  width: "100vw",
+                  height: "100vh",
+                  background: "rgba(0,0,0,0.3)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  zIndex: 2000,
+                }}
+                onClick={() => setShowVerwijderPopup(false)}
+              >
+                <div
+                  style={{
+                    background: "#fff",
+                    padding: 32,
+                    borderRadius: 8,
+                    boxShadow: "0 2px 16px rgba(0,0,0,0.2)",
+                    minWidth: 300,
+                    textAlign: "center",
+                  }}
+                  onClick={e => e.stopPropagation()}
+                >
+                  <p>
+                    Weet je zeker dat je <b>{boek.titel}</b> wilt verwijderen uit je bibliotheek?
+                  </p>
+                  <button
+                    style={{
+                      background: "#c0392b",
+                      color: "#fff",
+                      marginRight: 16,
+                      padding: "8px 16px",
+                      border: "none",
+                      borderRadius: 4,
+                      cursor: "pointer",
+                    }}
+                    onClick={async () => {
+                      if (!user) return;
+                      const { error } = await supabase
+                        .from("mijn_bibliotheek")
+                        .delete()
+                        .eq("gebruiker_id", user.id)
+                        .eq("boek_id", boek.id);
+                      if (!error) {
+                        setInBibliotheek(false);
+                        setShowVerwijderPopup(false);
+                        alert("Boek verwijderd uit je bibliotheek!");
+                      } else {
+                        alert("Kon boek niet verwijderen: " + error.message);
+                      }
+                    }}
+                  >
+                    Ja, verwijderen
+                  </button>
+                  <button
+                    style={{
+                      background: "#eee",
+                      color: "#333",
+                      padding: "8px 16px",
+                      border: "none",
+                      borderRadius: 4,
+                      cursor: "pointer",
+                    }}
+                    onClick={() => setShowVerwijderPopup(false)}
+                  >
+                    Annuleren
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <button
+            className={styles.button}
+            style={{ marginLeft: "10px" }}
+            onClick={async () => {
+              if (!user) return;
+              const { error } = await supabase
+                .from("mijn_bibliotheek")
+                .insert([{ gebruiker_id: user.id, boek_id: boek.id }]);
+              if (!error) {
+                setInBibliotheek(true);
+                alert("Boek toegevoegd aan je bibliotheek!");
+              } else {
+                alert("Kon boek niet toevoegen: " + error.message);
+              }
+            }}
+          >
+            ➕ Toevoegen aan mijn bibliotheek
+          </button>
         )}
       </div>
 

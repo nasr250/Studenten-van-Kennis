@@ -37,7 +37,6 @@ export default function LeerpadAanmelden() {
   }, [user]); // <-- user als dependency
 
   const handleAanmelden = async (leerpadId) => {
-
     const { error } = await supabase.from("leerpad_inschrijvingen").insert({
       gebruiker_id: user.id,
       leerpad_id: leerpadId,
@@ -46,6 +45,21 @@ export default function LeerpadAanmelden() {
     if (error) {
       console.error("Fout bij aanmelden:", error);
     } else {
+      // Haal het eerste boek van het leerpad op
+      const { data: boeken } = await supabase
+        .from("leerpad_boeken")
+        .select("boek_id")
+        .eq("leerpad_id", leerpadId)
+        .order("volgorde_nummer", { ascending: true })
+        .limit(1);
+
+      if (boeken && boeken.length > 0) {
+        // Voeg het eerste boek toe aan mijn_bibliotheek
+        await supabase.from("mijn_bibliotheek").upsert([
+          { gebruiker_id: user.id, boek_id: boeken[0].boek_id }
+        ]);
+      }
+
       alert("Succesvol aangemeld!");
     }
     // Herlaad de aangemelde leerpaden
@@ -205,6 +219,26 @@ const handleBoekClick = (boekId) => {
           <button className="btn" onClick={() => setGeselecteerdLeerpad(null)}>
             Terug naar overzicht
           </button>
+                    {/* Aanmeld/afmeldknop */}
+          {aangemeldeLeerpaden.some(
+            (inschrijving) => inschrijving.leerpad_id === geselecteerdLeerpad.id
+          ) ? (
+            <button
+              className="btn"
+              onClick={() => handleAfmelden(geselecteerdLeerpad.id)}
+              style={{ marginBottom: 16 }}
+            >
+              Afmelden
+            </button>
+          ) : (
+            <button
+              className="btn"
+              onClick={() => handleAanmelden(geselecteerdLeerpad.id)}
+              style={{ marginBottom: 16 }}
+            >
+              Aanmelden
+            </button>
+          )}
         </div>
       )}
       
