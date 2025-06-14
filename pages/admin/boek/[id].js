@@ -215,15 +215,30 @@ export default function BookEditPage() {
         alert("Boek succesvol aangemaakt!");
         router.push("/admin/boekenbeheer");
       } else {
-        const { error } = await supabase.from("boeken").update(boek).eq("id", id);
+        const { error } = await supabase.from("boeken").update(boek).eq("id", id).select();
         if (error) throw error;
-        console.log("Boek succesvol opgeslagen!");
       }
     } catch (error) {
       console.error("Error saving book:", error);
       alert("Er is een fout opgetreden bij het opslaan van het boek.");
     }
   };
+  const handleDeleteLes = async (lesId) => {
+    if (window.confirm("Weet je zeker dat je deze les wilt verwijderen?")) {
+      try {
+        const { error } = await supabase
+          .from("lessen")
+          .delete()
+          .eq("id", lesId);
+        if (error) throw error;
+        alert("Les succesvol verwijderd."); 
+        loadLessen(selectedLessenreeks);
+      } catch (error) {
+        console.error("Error deleting lesson:", error);
+        alert("Er is een fout opgetreden bij het verwijderen van de les.");
+      }
+    }
+    };
 
   useEffect(() => {
     const handleBeforeUnload = (event) => {
@@ -238,6 +253,7 @@ export default function BookEditPage() {
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
   }, [boek]);
+  
 
   return (
     <div className={styles.container}>
@@ -412,6 +428,23 @@ export default function BookEditPage() {
             pageSize={5}
             rowsPerPageOptions={[5]}
             getRowId={(row) => row.id}
+            processRowUpdate={async (updatedRow, oldRow) => {
+              // Update in Supabase
+              const { error } = await supabase
+                .from("lessen")
+                .update({
+                  titel: updatedRow.titel,
+                  les_url: updatedRow.les_url,
+                  volgorde_nummer: updatedRow.volgorde_nummer,
+                })
+                .eq("id", updatedRow.id);
+              if (error) {
+                alert("Fout bij opslaan: " + error.message);
+                return oldRow; // revert change
+              }
+              return updatedRow;
+            }}
+            experimentalFeatures={{ newEditingApi: true }}
           />
         </Box>
       )}
