@@ -118,35 +118,9 @@ const handleBoekClick = (boekId) => {
 
   return (
     <div className="container">
+      <h1 className="title">Leerpaden</h1>
       {!geselecteerdLeerpad ? (
         <>
-        <h1>Beschikbare Leerpaden</h1>
-        <ul className="grid">
-          {leerpaden.map((lp) => {
-            const alIngeschreven = aangemeldeLeerpaden.some(
-              (inschrijving) => inschrijving.leerpad_id === lp.id
-            );
-            return (
-              <>{alIngeschreven ? <></> :               
-              <li key={lp.id} className="card">
-                <h2>{lp.titel}</h2>
-                <p>{lp.beschrijving}</p>
-                <button className="btn" onClick={() => fetchBoekenVoorLeerpad(lp.id)}>
-                  Bekijk Leerpad
-                </button>
-                <button
-                  className="btn"
-                  onClick={() => handleAanmelden(lp.id)}
-                  disabled={alIngeschreven}
-                >
-                  Aanmelden
-                </button>
-              </li>}
-
-              </>
-            );
-          })}
-        </ul>
         <h2>Aangemelde Leerpaden</h2>
         <ul className="grid">
           {aangemeldeLeerpaden.map((inschrijving) => {
@@ -158,9 +132,37 @@ const handleBoekClick = (boekId) => {
                   Bekijk Leerpad
                 </button>
                 <button className="btn" onClick={() => handleAfmelden(inschrijving.leerpad_id)}>
-                 Afmelden
+                  Afmelden
                 </button>
               </li>
+            );
+          })}
+        </ul>
+        <h2>Beschikbare Leerpaden</h2>
+        <ul className="grid">
+          {leerpaden.map((lp) => {
+            const alIngeschreven = aangemeldeLeerpaden.some(
+              (inschrijving) => inschrijving.leerpad_id === lp.id
+            );
+            return (
+              <>
+                {alIngeschreven ? null : (
+                  <li key={lp.id} className="card">
+                    <h2>{lp.titel}</h2>
+                    <p>{lp.beschrijving}</p>
+                    <button className="btn" onClick={() => fetchBoekenVoorLeerpad(lp.id)}>
+                      Bekijk Leerpad
+                    </button>
+                    <button
+                      className="btn"
+                      onClick={() => handleAanmelden(lp.id)}
+                      disabled={alIngeschreven}
+                    >
+                      Aanmelden
+                    </button>
+                  </li>
+                )}
+              </>
             );
           })}
         </ul>
