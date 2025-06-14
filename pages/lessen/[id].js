@@ -6,10 +6,9 @@ import debounce from "lodash.debounce";
 import "react-quill/dist/quill.snow.css";
 import styles from "../../styles/Lesson.module.css";
 
-// Dynamische import van ReactQuill
 const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
 
-let isCreatingNotitie = false; // Globale variabele om inserts te voorkomen
+let isCreatingNotitie = false;
 
 export default function LessonPage() {
   const router = useRouter();
@@ -18,72 +17,71 @@ export default function LessonPage() {
   const [bestaandeNotitie, setBestaandeNotitie] = useState(null);
   const [user, setUser] = useState(null);
   const [voortgang, setVoortgang] = useState(null);
-  const [notitie, setNotitie] = useState(""); // Voor Quill.js content
+  const [notitie, setNotitie] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  const [isLaatsteLes, setIsLaatsteLes] = useState(false); // Controle voor laatste les
   const [toets, setToets] = useState(null);
+  const [alleLessen, setAlleLessen] = useState([]);
+  const [huidigeLesIndex, setHuidigeLesIndex] = useState(-1);
 
+  // Haal user op
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user));
   }, []);
 
+  // Haal lesdata, voortgang, notitie en toets op
   useEffect(() => {
     const fetchLessonData = async () => {
-      if (!id || !user) return; // Zorg ervoor dat user niet null is
+      if (!id || !user) return;
       setIsLoading(true);
 
       try {
-        // Fetch lesgegevens met boekinformatie
+        // Lesgegevens
         const { data: lesData, error: lesError } = await supabase
           .from("lessen")
           .select("*, lessenreeks_id, boek:boek_id(*)")
           .eq("id", id)
           .single();
-
         if (lesError) throw lesError;
         setLes(lesData);
 
-        // Controleer of dit de laatste les is
-        const { data: alleLessen } = await supabase
+        // Alle lessen in deze reeks
+        const { data: alleLessenData } = await supabase
           .from("lessen")
-          .select("id")
-          .eq("lessenreeks_id", lesData.lessenreeks_id);
+          .select("id, titel, volgorde_nummer")
+          .eq("lessenreeks_id", lesData.lessenreeks_id)
+          .order("volgorde_nummer", { ascending: true }); // sorteer op volgorde_nummer
 
-        const laatsteLesId = alleLessen?.[alleLessen.length - 1]?.id;
-        setIsLaatsteLes(laatsteLesId === id); // Controleer of huidige les de laatste is
+        setAlleLessen(alleLessenData || []);
+        const index = (alleLessenData || []).findIndex((l) => l.id == id);
+        setHuidigeLesIndex(index);
 
-        // Fetch bestaande notitie
+        // Notitie ophalen
         const { data: notitieData } = await supabase
           .from("les_notities")
           .select("*")
           .eq("gebruiker_id", user.id)
           .eq("les_id", id)
           .single();
-
         if (notitieData) {
           setBestaandeNotitie(notitieData);
-          setNotitie(notitieData.notitie); // Zet de bestaande notitie in Quill.js
+          setNotitie(notitieData.notitie);
         }
 
-        // 📈 Voortgang checken per lessenreeks
-        const { data: voortgang, error: voortgangError } = await supabase
+        // Voortgang ophalen
+        const { data: voortgangData, error: voortgangError } = await supabase
           .from("voortgang")
           .select("*")
           .eq("gebruiker_id", user.id)
           .eq("lessenreeks_id", lesData.lessenreeks_id)
           .single();
-
-        setVoortgang(voortgang);
-
+        setVoortgang(voortgangData);
         if (voortgangError && voortgangError.code !== "PGRST116") {
           console.error("Fout bij voortgang ophalen:", voortgangError);
         }
 
-        // Als voortgang bestaat:
-        if (voortgang) {
-          const bekeken = voortgang.bekeken_lessons || [];
-
-          // Als les nog niet bekeken, voeg toe
+        // Voortgang bijwerken
+        if (voortgangData) {
+          const bekeken = voortgangData.bekeken_lessons || [];
           if (!bekeken.includes(id)) {
             const nieuweBekeken = [...bekeken, id];
             await supabase
@@ -92,23 +90,21 @@ export default function LessonPage() {
                 bekeken_lessons: nieuweBekeken,
                 laatste_activiteit: new Date().toISOString(),
               })
-              .eq("id", voortgang.id);
+              .eq("id", voortgangData.id);
           } else {
-            // Alleen update van activiteit
             await supabase
               .from("voortgang")
               .update({
                 laatste_activiteit: new Date().toISOString(),
               })
-              .eq("id", voortgang.id);
+              .eq("id", voortgangData.id);
           }
         } else {
-          // Geen voortgang? Nieuw record aanmaken per lessenreeks
           await supabase.from("voortgang").insert([
             {
               gebruiker_id: user.id,
               boek_id: lesData.boek_id,
-              lessenreeks_id: lesData.lessenreeks_id, // Voortgang per lessenreeks
+              lessenreeks_id: lesData.lessenreeks_id,
               bekeken_lessons: [id],
               voltooide_eindtoets: false,
               laatste_activiteit: new Date().toISOString(),
@@ -116,14 +112,11 @@ export default function LessonPage() {
           ]);
         }
 
-        // Haal de toets op voor de les
-        const { data: toetsData, error } = await supabase
+        // Toets ophalen
+        const { data: toetsData } = await supabase
           .from("toetsen")
           .select("*, toets_vragen(*)")
           .or(`les_id.eq.${id},lessenreeks_id.eq.${lesData.lessenreeks_id}`);
-
-        console.log("toetsData:", toetsData);
-        console.log(error);
         setToets(toetsData);
       } catch (error) {
         console.error("Error fetching lesson data:", error);
@@ -135,41 +128,35 @@ export default function LessonPage() {
     fetchLessonData();
   }, [id, user]);
 
+  // Notitie opslaan
   const saveNotitie = async (content) => {
     if (!user || !id) return;
-
     try {
       if (bestaandeNotitie) {
-        // Update bestaande notitie
         const { error } = await supabase
           .from("les_notities")
           .update({
-            notitie: content, // Opslaan als HTML
+            notitie: content,
             updated_at: new Date().toISOString(),
           })
           .eq("id", bestaandeNotitie.id);
-
         if (error) throw error;
       } else if (!isCreatingNotitie) {
-        // Maak nieuwe notitie aan
-        isCreatingNotitie = true; // Voorkom meerdere inserts
+        isCreatingNotitie = true;
         const { data, error } = await supabase.from("les_notities").insert({
           gebruiker_id: user.id,
           les_id: id,
-          notitie: content, // Opslaan als HTML
+          notitie: content,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         }).select("*").single();
-
         if (error) throw error;
-
-        // Stel de nieuwe notitie in als bestaande notitie
         setBestaandeNotitie(data);
-        isCreatingNotitie = false; // Reset de variabele
+        isCreatingNotitie = false;
       }
     } catch (error) {
       console.error("Error saving note:", error);
-      isCreatingNotitie = false; // Reset de variabele bij een fout
+      isCreatingNotitie = false;
     }
   };
 
@@ -180,17 +167,16 @@ export default function LessonPage() {
 
   const handleEditorChange = (content) => {
     setNotitie(content);
-    debouncedSaveNotitie(content); // Roep de gedebounceerde functie aan
+    debouncedSaveNotitie(content);
   };
 
   const handleBlur = () => {
-    // Sla direct op bij verlies van focus
-    debouncedSaveNotitie.flush(); // Voer de gedebounceerde functie direct uit
+    debouncedSaveNotitie.flush();
   };
 
+  // Les als voltooid markeren
   const markLessonAsCompleted = async () => {
     if (!user || !id || !voortgang) return;
-  
     try {
       const voltooideLessons = voortgang.voltooide_lessons || [];
       if (!voltooideLessons.includes(id)) {
@@ -202,7 +188,6 @@ export default function LessonPage() {
             laatste_activiteit: new Date().toISOString(),
           })
           .eq("id", voortgang.id);
-  
         setVoortgang({ ...voortgang, voltooide_lessons: updatedLessons });
         alert("Les gemarkeerd als voltooid!");
       } else {
@@ -270,7 +255,9 @@ export default function LessonPage() {
       </div>
 
       {/* Les Toets */}
-      {toets && !isLaatsteLes && (
+      {toets && !(
+        huidigeLesIndex === alleLessen.length - 1
+      ) && (
         <div className={styles.quizSection}>
           <h2>Les Toets</h2>
           <p>Er is een toets beschikbaar voor deze les. Klik op de onderstaande knop om de toets te starten.</p>
@@ -279,7 +266,7 @@ export default function LessonPage() {
           </button>
         </div>
       )}
-      {isLaatsteLes && toets && (
+      {huidigeLesIndex === alleLessen.length - 1 && toets && (
         <div className={styles.quizSection}>
           <h2>Eindtoets</h2>
           <p>Dit is de laatste les van deze lessenreeks. Klik op de onderstaande knop om de eindtoets te starten.</p>
@@ -288,9 +275,33 @@ export default function LessonPage() {
           </button>
         </div>
       )}
-      <button onClick={markLessonAsCompleted} className={styles.button}>
-        Markeer les als voltooid
-      </button>
+
+      {/* Navigatieknoppen onderaan, met "Markeer als voltooid" in het midden */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 40 }}>
+        {huidigeLesIndex > 0 ? (
+          <button
+            className={styles.button}
+            style={{ alignSelf: "flex-start" }}
+            onClick={() => router.push(`/lessen/${alleLessen[huidigeLesIndex - 1].id}`)}
+          >
+            ← Vorige les
+          </button>
+        ) : <div />}
+
+        <button onClick={markLessonAsCompleted} className={styles.button}>
+          Markeer les als voltooid
+        </button>
+
+        {huidigeLesIndex > -1 && huidigeLesIndex < alleLessen.length - 1 ? (
+          <button
+            className={styles.button}
+            style={{ alignSelf: "flex-end" }}
+            onClick={() => router.push(`/lessen/${alleLessen[huidigeLesIndex + 1].id}`)}
+          >
+            Volgende les →
+          </button>
+        ) : <div />}
+      </div>
     </div>
   );
 }
