@@ -13,6 +13,29 @@ export default function LeerpadAanmelden() {
   const [aangemeldeLeerpaden, setAangemeldeLeerpaden] = useState([]);
   const router = useRouter();
 
+  // --- Toegevoegd: voortgang ophalen voor boeken ---
+  useEffect(() => {
+    if (!user || !boeken.length) return;
+    const fetchVoortgangVoorBoeken = async () => {
+      const boekIds = boeken.map(b => b.boek_id);
+      const { data: voortgangData } = await supabase
+        .from("voortgang")
+        .select("boek_id, afgerond")
+        .eq("gebruiker_id", user.id)
+        .in("boek_id", boekIds);
+
+      // Map: boek_id => afgerond (true/false)
+      const voortgangMap = {};
+      boekIds.forEach(id => {
+        const v = voortgangData?.find(f => f.boek_id === id);
+        voortgangMap[id] = v ? !!v.afgerond : false;
+      });
+      setVoortgang(voortgangMap);
+    };
+    fetchVoortgangVoorBoeken();
+  }, [boeken, user]);
+  // --- einde toevoeging ---
+
   useEffect(() => {
     if (!user) return; // Wacht tot user geladen is
 
@@ -93,28 +116,28 @@ export default function LeerpadAanmelden() {
   };
   
   const handleAfmelden = async (leerpadId) => {
-  const { error } = await supabase
-    .from("leerpad_inschrijvingen")
-    .delete()
-    .eq("gebruiker_id", user.id)
-    .eq("leerpad_id", leerpadId);
-
-  if (error) {
-    console.error("Fout bij afmelden:", error);
-  } else {
-    // Herlaad de aangemelde leerpaden
-    const { data } = await supabase
+    const { error } = await supabase
       .from("leerpad_inschrijvingen")
-      .select("leerpad_id")
-      .eq("gebruiker_id", user.id);
-    setAangemeldeLeerpaden(data);
-  }
-};
+      .delete()
+      .eq("gebruiker_id", user.id)
+      .eq("leerpad_id", leerpadId);
 
-const handleBoekClick = (boekId) => {
-  router.push(`/boeken/${boekId}`);
-  setGeselecteerdLeerpad(null); // Reset geselecteerde leerpad na boekselectie
-  }
+    if (error) {
+      console.error("Fout bij afmelden:", error);
+    } else {
+      // Herlaad de aangemelde leerpaden
+      const { data } = await supabase
+        .from("leerpad_inschrijvingen")
+        .select("leerpad_id")
+        .eq("gebruiker_id", user.id);
+      setAangemeldeLeerpaden(data);
+    }
+  };
+
+  const handleBoekClick = (boekId) => {
+    router.push(`/boeken/${boekId}`);
+    setGeselecteerdLeerpad(null); // Reset geselecteerde leerpad na boekselectie
+  };
 
   return (
     <div className="container">
@@ -211,6 +234,9 @@ const handleBoekClick = (boekId) => {
                 >
                   <span style={{ fontWeight: "bold", marginRight: 8 }}>{idx + 1}.</span>
                   <h4 style={{ display: "inline" }}>{boek.boeken.titel}</h4>
+                  {isAangemeld && isVoltooid && (
+                    <span className={styles.check} title="Afgerond">✔️</span>
+                  )}
                   {isAangemeld && isGesloten && (
                     <span className={styles.slotje} title="Nog niet beschikbaar">🔒</span>
                   )}
@@ -221,7 +247,7 @@ const handleBoekClick = (boekId) => {
           <button className="btn" onClick={() => setGeselecteerdLeerpad(null)}>
             Terug naar overzicht
           </button>
-                    {/* Aanmeld/afmeldknop */}
+          {/* Aanmeld/afmeldknop */}
           {aangemeldeLeerpaden.some(
             (inschrijving) => inschrijving.leerpad_id === geselecteerdLeerpad.id
           ) ? (

@@ -103,6 +103,9 @@ export default function VoortgangPage() {
         const totaleLessen = lessenInReeks.length;
         const voltooideLessen = voortgangInReeks.reduce((count, v) => count + v.voltooide_lessons.length, 0);
 
+        // Voeg boolean toe: afgerond als alle lessen voltooid zijn
+        const afgerond = totaleLessen > 0 && voltooideLessen === totaleLessen;
+
         return {
           id: lessenreeks.id,
           titel: lessenreeks.titel,
@@ -114,6 +117,7 @@ export default function VoortgangPage() {
           toetsen: toetsenInReeks,
           notities: notitiesInReeks,
           resultaten: resultatenInReeks,
+          afgerond, // <-- toegevoegd
         };
       });
 
