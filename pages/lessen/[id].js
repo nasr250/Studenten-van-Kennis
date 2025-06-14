@@ -198,6 +198,11 @@ export default function LessonPage() {
     }
   };
 
+  useEffect(() => {
+    setNotitie("");
+    setBestaandeNotitie(null);
+  }, [id]);
+
   if (isLoading) return <div>Laden...</div>;
   if (!les) return <div>Les niet gevonden</div>;
 
