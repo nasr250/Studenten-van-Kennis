@@ -1,0 +1,125 @@
+:root {
+  --primary-color: #16A085;
+  --primary-hover: #1ABC9C;
+  --text-color: #333;
+  --background-light: #fff;
+  --shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  --border-radius: 8px;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 2rem;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+}
+
+@media (max-width: 768px) {
+  html {
+    font-size: 14px;
+  }
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen,
+    Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
+  background: #f5f5f5;
+  color: var(--text-color);
+  line-height: 1.6;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--spacing-lg);
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: var(--spacing-md);
+  }
+}
+
+.card {
+  background: var(--background-light);
+  padding: var(--spacing-lg);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
+  margin-bottom: var(--spacing-md);
+}
+.card:hover {
+  box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
+}
+
+.btn {
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.btn:hover {
+  background: var(--primary-hover);
+}
+
+.btn + .btn {
+  margin-left: var(--spacing-sm);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--spacing-md);
+}
+
+h1, h2, h3 {
+  margin-bottom: var(--spacing-md);
+}
+
+input, textarea {
+  width: 100%;
+  padding: var(--spacing-sm);
+  border: 1px solid #ddd;
+  border-radius: var(--border-radius);
+  margin-bottom: var(--spacing-md);
+  font-size: 1rem;
+}
+.progress {
+  font-size: 1.2rem;
+  margin-bottom: var(--spacing-md);
+  color: var(--primary-color);
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+ul {
+  list-style: none;
+  padding-left: 0; /* optioneel, om inspringing te verwijderen */
+}
+
+.leerpadgrid {
+  display: grid;
+  justify-content: start;
+  width: 50%;
+  gap: 1rem;
+}
+
+.title {
+  color: var(--primary-color);
+  text-align: center;
+  margin-bottom: 2rem;
+  font-size: 2.5rem;
+}

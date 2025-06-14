@@ -1,0 +1,152 @@
+.container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 2rem;
+  font-family: 'Arial', sans-serif;
+  color: #333;
+}
+
+.container h1,
+.container h2 {
+  color: #333;
+  font-weight: bold;
+  text-align: center;
+}
+
+.container p {
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.questionCard {
+  background: #f9f9f9;
+  padding: 1.5rem;
+  margin: 1rem 0;
+  border-radius: 16px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e6e6e6;
+}
+
+.option {
+  background: #f0f0f0;
+  padding: 1rem;
+  margin: 0.5rem 0;
+  border-radius: 12px;
+  border: 1px solid #ddd;
+  cursor: pointer;
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+.option:hover {
+  background: #e6f7ff;
+  border-color: #58cc02;
+}
+
+.option.selected {
+  background: #d4f4dd;
+  border-color: #58cc02;
+}
+
+.questionCard input[type="radio"] {
+  margin-right: 0.5rem;
+}
+
+.questionCard input[type="text"] {
+  width: 100%;
+  padding: 0.75rem;
+  margin-top: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 1rem;
+}
+
+.submitButton {
+  background: #58cc02;
+  color: white;
+  border: none;
+  padding: 1rem 2rem;
+  border-radius: 24px;
+  cursor: pointer;
+  margin-top: 2rem;
+  font-size: 1.1rem;
+  font-weight: bold;
+  transition: background 0.3s ease;
+}
+
+.submitButton:hover {
+  background: #45a800;
+}
+
+.results {
+  text-align: center;
+  padding: 2rem;
+  background: #f0f8ff;
+  border-radius: 16px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.button {
+  margin-top: var(--spacing-md); /* Add padding above the button */
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background 0.3s ease;
+}
+
+.button:hover {
+  background: var(--primary-hover);
+}
+
+.navigationButtons {
+  display: flex;
+  margin-top: 2rem;
+  gap: 1rem;
+}
+
+.navigationButtons.firstQuestion {
+  justify-content: flex-end; /* Align "Volgende" to the right if it's the first question */
+}
+
+.navigationButtons.default {
+  justify-content: space-between; /* Space between "Terug" and "Volgende" for other cases */
+}
+
+.navigationButton {
+  margin-top: var(--spacing-md); /* Add padding above the navigation button */
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background 0.3s ease;
+}
+
+.navigationButton:hover {
+  background: var(--primary-hover);
+}
+
+.answersOverview {
+  margin-top: 2rem;
+  background: #f9f9f9;
+  padding: 1.5rem;
+  border-radius: 16px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.answerCard {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.answerCard p {
+  margin: 0.5rem 0;
+}

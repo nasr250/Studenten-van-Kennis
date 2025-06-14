@@ -1,0 +1,18 @@
+.voltooid {
+  border: 2px solid #28a745 !important;
+  background: #d4edda !important; /* lichtgroen */
+}
+.actief {
+  border: 2px solid #16A085 !important;
+  background: #e8fcf7 !important;
+}
+.gesloten {
+  background: #f0f0f0 !important;
+  color: #aaa !important;
+  position: relative;
+}
+.gesloten .slotje {
+  margin-left: 8px;
+  font-size: 1.2em;
+  vertical-align: middle;
+}
