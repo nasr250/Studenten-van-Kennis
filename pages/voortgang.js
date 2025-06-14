@@ -2,12 +2,13 @@ import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import styles from "../styles/Progress.module.css";
 import Modal from "../components/Modal";
+import { useUser } from "../context/UserContext";
 
 export default function VoortgangPage() {
+  const user = useUser();
   const [voortgangData, setVoortgangData] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
-  const [toetsResultaten, setToetsResultaten] = useState([]); // Store test results
-  const [user, setUser] = useState(null);
+  const [toetsResultaten, setToetsResultaten] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("Alle");
   const [sortOption, setSortOption] = useState("titel");
@@ -15,31 +16,43 @@ export default function VoortgangPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
-    const fetchUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-      if (user) {
-        fetchVoortgang(user.id);
-        fetchToetsResultaten(user.id); // Fetch test results
-      }
-    };
-    fetchUser();
-  }, []);
+    if (!user) return;
+    const fetchData = async () => {
+      setLoading(true); 
+        // Haal eerst boek_ids uit mijn_bibliotheek
+        const { data: mijnBoeken } = await supabase
+          .from("mijn_bibliotheek")
+          .select("boek_id")
+          .eq("gebruiker_id", user.id);
+
+        const mijnBoekIds = (mijnBoeken || []).map(b => b.boek_id);
+
+        fetchVoortgang(user.id, mijnBoekIds);
+        fetchToetsResultaten(user.id);
+      };
+      fetchData();
+  }, [user]);
 
   useEffect(() => {
     applyFiltersAndSorting();
   }, [voortgangData, filter, sortOption]);
 
-  const fetchVoortgang = async (userId) => {
+  // fetchVoortgang accepteert nu mijnBoekIds als tweede argument
+  const fetchVoortgang = async (userId, mijnBoekIds) => {
     if (!userId) return;
 
     try {
       const { data: lessenreeksen } = await supabase.from("lessenreeksen").select("*");
 
+      // Filter lessenreeksen op boeken die in mijn bibliotheek zitten
+      const gefilterdeLessenreeksen = lessenreeksen.filter(
+        (reeks) => mijnBoekIds.includes(reeks.boek_id)
+      );
+
       const { data: voortgang } = await supabase
-      .from("voortgang")
-      .select("*")
-      .eq("gebruiker_id", userId);
+        .from("voortgang")
+        .select("*")
+        .eq("gebruiker_id", userId);
 
       const { data: notities } = await supabase
         .from("les_notities")
@@ -59,20 +72,20 @@ export default function VoortgangPage() {
         .select("toets_id, score, totaal_vragen, voltooid_op")
         .eq("gebruiker_id", userId);
 
-      const dataPerLessenreeks = lessenreeksen.map((lessenreeks) => {
+      const dataPerLessenreeks = gefilterdeLessenreeksen.map((lessenreeks) => {
         // Filter lessen die bij deze lessenreeks horen
         const lessenInReeks = lessen.filter((les) => les.lessenreeks_id === lessenreeks.id);
 
         // Filter voortgang voor lessen in deze lessenreeks
         const voortgangInReeks = voortgang.filter((v) =>
-            v.bekeken_lessons &&
-            v.boek_id === lessenreeks.boek_id &&
-            v.lessenreeks_id === lessenreeks.id && // Ensure it matches the specific series
-            v.bekeken_lessons.some((lesId) => lessenInReeks.some((les) => les.id === lesId))
+          v.bekeken_lessons &&
+          v.boek_id === lessenreeks.boek_id &&
+          v.lessenreeks_id === lessenreeks.id &&
+          v.bekeken_lessons.some((lesId) => lessenInReeks.some((les) => les.id === lesId))
         );
         // Check if any lesson in the series has been viewed
         const gestart = voortgangInReeks.some((v) => v.bekeken_lessons.length > 0);
-        
+
         // Filter toetsen die bij deze lessenreeks horen
         const toetsenInReeks = toetsen.filter((toets) => toets.lessenreeks_id === lessenreeks.id);
 
@@ -97,7 +110,7 @@ export default function VoortgangPage() {
           voltooideLessen,
           voortgangPercentage:
             totaleLessen > 0 ? Math.round((voltooideLessen / totaleLessen) * 100) : 0,
-          gestart, // Mark as started if any lesson is viewed
+          gestart,
           toetsen: toetsenInReeks,
           notities: notitiesInReeks,
           resultaten: resultatenInReeks,

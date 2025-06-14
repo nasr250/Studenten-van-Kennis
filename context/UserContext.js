@@ -7,16 +7,23 @@ export function UserProvider({ children }) {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    // Haal user op bij laden
-    const session = supabase.auth.getSession();
-    setUser(session?.user ?? null);
-
-    // Optioneel: luister naar auth changes
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    // Haal user op bij laden (async)
+    const getUser = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       setUser(session?.user ?? null);
-    });
+    };
+    getUser();
 
-    return () => listener?.unsubscribe();
+    // Luister naar auth changes
+    const { data: subscription } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setUser(session?.user ?? null);
+      }
+    );
+
+    return () => subscription?.unsubscribe();
   }, []);
 
   return (
