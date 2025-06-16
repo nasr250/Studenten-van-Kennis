@@ -173,19 +173,19 @@ export default function BookEditPage() {
 
         alert("Lessenreeks en lessen succesvol aangemaakt!");
       } else if (playlistUrl.includes("soundcloud.com")) {
-        const res = await fetch(
-          "/api/scrape?url=" + encodeURIComponent(playlistUrl)
-        );
-        const data = await res.json();
+        // Gebruik je eigen backend API route
+        const apiRes = await fetch(`/api/soundcloud-playlist?playlistUrl=${encodeURIComponent(playlistUrl)}`);
+        const playlistData = await apiRes.json();
 
-        if (!data.tracks) {
-          throw new Error("Geen tracks gevonden in playlist");
+        if (!Array.isArray(playlistData.tracks) || playlistData.tracks.length === 0) {
+          alert("Geen tracks gevonden in deze SoundCloud playlist. Response: " + JSON.stringify(playlistData));
+          return;
         }
 
-        const newLessons = data.tracks.map((track, index) => ({
+        const newLessons = playlistData.tracks.map((track, index) => ({
           titel: track.title,
           boek_id: id,
-          les_url: track.url,
+          les_url: track.permalink_url,
           volgorde_nummer: index + 1,
           lessenreeks_id: lessenreeksId,
         }));
