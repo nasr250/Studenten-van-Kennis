@@ -21,7 +21,8 @@
 }
 .notesSection {
   margin-top: 20px;
-}
+  height: 450px;
+  }
 
 .feedback {
   color: green;
