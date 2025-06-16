@@ -5,6 +5,9 @@ import dynamic from "next/dynamic";
 import debounce from "lodash.debounce";
 import "react-quill/dist/quill.snow.css";
 import styles from "../../styles/Lesson.module.css";
+import Script from "next/script";
+import YouTube from "react-youtube";
+import { useRef } from "react";
 
 const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
 
@@ -22,6 +25,9 @@ export default function LessonPage() {
   const [toets, setToets] = useState(null);
   const [alleLessen, setAlleLessen] = useState([]);
   const [huidigeLesIndex, setHuidigeLesIndex] = useState(-1);
+  const [mediaTimestamps, setMediaTimestamps] = useState({});
+  const youtubeRef = useRef(null);
+  const soundcloudRef = useRef(null);
 
   // Haal user op
   useEffect(() => {
@@ -128,6 +134,98 @@ export default function LessonPage() {
     fetchLessonData();
   }, [id, user]);
 
+  // Haal media-timestamps direct uit Supabase bij laden van de les
+  useEffect(() => {
+    if (!id || !user) return;
+    const fetchTimestamps = async () => {
+      console.log("Fetching timestamps for user:", user.id, "and lesson:", id);
+      const { data, error } = await supabase
+        .from("media_timestamps")
+        .select("tijd")
+        .eq("gebruiker_id", user.id)
+        .eq("les_id", id)
+        .single();
+        console.log("Fetched timestamps:", data);
+      if (error) {
+        setMediaTimestamps({});
+        return;
+      }
+      setMediaTimestamps({ tijd: data?.tijd || 0 });
+    };
+    fetchTimestamps();
+  }, [id, user]);
+
+  // SoundCloud Widget API integratie
+  useEffect(() => {
+    if (!les?.les_url || !les.les_url.includes("soundcloud.com")) return;
+    const checkWidget = setInterval(() => {
+      if (window.SC && window.SC.Widget) {
+        clearInterval(checkWidget);
+        const widget = window.SC.Widget(document.getElementById("soundcloud-player"));
+        soundcloudRef.current = widget;
+        widget.bind(window.SC.Widget.Events.READY, () => {
+          const start = mediaTimestamps?.tijd || 0;
+          widget.seekTo(start * 1000); // tijd in milliseconden!
+        });
+        widget.bind(window.SC.Widget.Events.PAUSE, () => {
+          widget.getPosition((ms) => {
+            saveTimestamp(Math.floor(ms / 1000));
+          });
+        });
+      }
+    }, 200);
+
+    const handleUnload = () => {
+      if (soundcloudRef.current) {
+        soundcloudRef.current.getPosition((ms) => {
+          saveTimestamp(les.les_url, Math.floor(ms / 1000));
+        });
+      }
+    };
+    window.addEventListener("beforeunload", handleUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleUnload);
+      clearInterval(checkWidget);
+    };
+    // eslint-disable-next-line
+  }, [les, mediaTimestamps]);
+
+  // YouTube player met react-youtube
+  const onYouTubeReady = (event) => {
+    const start = mediaTimestamps?.tijd || 0;
+    event.target.seekTo(start, true);
+  };
+
+  const onYouTubeStateChange = (event) => {
+    if (event.data === window.YT.PlayerState.PAUSED || event.data === window.YT.PlayerState.ENDED) {
+      const tijd = Math.floor(event.target.getCurrentTime());
+      saveTimestamp(tijd);
+    }
+  };
+
+  // Functie om tijd op te slaan in backend
+  const saveTimestamp = async (tijd) => {
+    if (!user || !id) return;
+  
+    try {
+      const { error } = await supabase
+        .from("media_timestamps")
+        .upsert({
+          gebruiker_id: user.id,
+          les_id: id,
+          tijd,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: ['gebruiker_id', 'les_id'] }); // Specificeer de kolommen voor conflict
+      
+      if (error) {
+        console.error("Fout bij het opslaan van de timestamp:", error);
+      } else {
+        console.log("Timestamp succesvol opgeslagen!");
+      }
+    } catch (err) {
+      console.error("Fout bij het opslaan van de timestamp:", err);
+    }
+  };
   // Notitie opslaan
   const saveNotitie = async (content) => {
     if (!user || !id) return;
@@ -208,25 +306,53 @@ export default function LessonPage() {
 
   return (
     <div className={styles.container}>
+      <Script
+        src="https://w.soundcloud.com/player/api.js"
+        strategy="afterInteractive"
+        id="sc-widget-api"
+      />
+
       <h1>{les.titel}</h1>
 
       {/* Video */}
       <div className={styles.videoContainer}>
-        {les.les_url && (
+        {les.les_url && les.les_url.includes("soundcloud.com") && (
           <iframe
-            src={
-              les.les_url.includes("soundcloud.com")
-                ? `https://w.soundcloud.com/player/?url=${encodeURIComponent(
-                    les.les_url
-                  )}&color=%23ff5500&auto_play=false&hide_related=true&show_comments=false&show_user=true&show_reposts=false&show_teaser=false&visual=true`
-                : les.les_url
-            }
+            id="soundcloud-player"
+            src={`https://w.soundcloud.com/player/?url=${encodeURIComponent(
+              les.les_url
+            )}&color=%23ff5500&auto_play=false&hide_related=true&show_comments=false&show_user=true&show_reposts=false&show_teaser=false&visual=true`}
             className={styles.lessonFrame}
             title={les.titel}
             scrolling="no"
             allow="autoplay"
           />
         )}
+        {les.les_url && les.les_url.includes("youtube.com") && (
+          <YouTube
+            videoId={getYouTubeVideoId(les.les_url)}
+            opts={{
+              width: "100%",
+              height: "400",
+              playerVars: { enablejsapi: 1 },
+            }}
+            onReady={onYouTubeReady}
+            onStateChange={onYouTubeStateChange}
+            className={styles.lessonFrame}
+          />
+        )}
+        {/* Voor andere URLs eventueel fallback */}
+        {les.les_url &&
+          !les.les_url.includes("soundcloud.com") &&
+          !les.les_url.includes("youtube.com") && (
+            <iframe
+              src={les.les_url}
+              className={styles.lessonFrame}
+              title={les.titel}
+              scrolling="no"
+              allow="autoplay"
+            />
+          )}
       </div>
 
       {/* Notities */}
@@ -309,4 +435,23 @@ export default function LessonPage() {
       </div>
     </div>
   );
+}
+
+function getYouTubeVideoId(url) {
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname === "youtu.be") {
+      return parsed.pathname.slice(1);
+    }
+    if (parsed.searchParams.get("v")) {
+      return parsed.searchParams.get("v");
+    }
+    // Voor embed links
+    if (parsed.pathname.startsWith("/embed/")) {
+      return parsed.pathname.split("/embed/")[1];
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
