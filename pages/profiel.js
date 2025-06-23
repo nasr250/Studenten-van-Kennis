@@ -4,6 +4,7 @@ import { useUser } from "../context/UserContext";
 
 export default function Profiel() {
   const [email, setEmail] = useState("");
+  const [kunya, setKunya] = useState(""); // <-- nieuw
   const [error, setError] = useState(null);
   const [message, setMessage] = useState(null);
 
@@ -19,6 +20,15 @@ export default function Profiel() {
   useEffect(() => {
     if (!user) return;
     setEmail(user.email || "");
+    // Haal kunya op uit profiel
+    supabase
+      .from("profielen")
+      .select("kunya")
+      .eq("gebruiker_id", user.id)
+      .single()
+      .then(({ data }) => {
+        if (data) setKunya(data.kunya || "");
+      });
   }, [user]);
 
   // Verifieer oude wachtwoord door opnieuw in te loggen
@@ -66,6 +76,18 @@ export default function Profiel() {
     else setMessage("Er is een e-mail verstuurd om je wachtwoord te wijzigen.");
   };
 
+  // Voeg deze functie toe om kunya op te slaan
+  const handleKunyaOpslaan = async () => {
+    setError(null);
+    setMessage(null);
+    const { error } = await supabase
+      .from("profielen")
+      .update({ kunya })
+      .eq("gebruiker_id", user.id);
+    if (error) setError("Kon kunya niet opslaan.");
+    else setMessage("Kunya opgeslagen.");
+  };
+
   // Oogje als inline SVG
   const Eye = ({ open }) => (
     <span style={{ cursor: "pointer", marginLeft: 8 }}>
@@ -83,6 +105,22 @@ export default function Profiel() {
       {error && <div style={{ color: "#c0392b", marginBottom: "1rem" }}>{error}</div>}
       {message && <div style={{ color: "#16A085", marginBottom: "1rem" }}>{message}</div>}
       <div>
+        <label style={{ fontWeight: "bold" }}>Kunya</label>
+        <input
+          type="text"
+          value={kunya}
+          onChange={e => setKunya(e.target.value)}
+          className="input"
+          style={{ width: "100%", marginBottom: "1.5rem" }}
+        />
+        <button
+          type="button"
+          className="btn" 
+          onClick={handleKunyaOpslaan}
+          style={{ width: "100%", marginBottom: "1.5rem" }}
+        >
+          Kunya opslaan
+        </button>
         <label style={{ fontWeight: "bold" }}>Email</label>
         <input
           type="email"
@@ -156,22 +194,24 @@ export default function Profiel() {
                 <Eye open={showHerhaal} />
               </span>
             </div>
-            <button
-              type="button"
-              className="btn"
-              onClick={handleWachtwoordWijzigen}
-              style={{ width: "100%", marginBottom: "1rem" }}
-            >
-              Wijzig wachtwoord
-            </button>
-            <button
-              type="button"
-              className="btn"
-              onClick={handleResetPassword}
-              style={{ width: "100%", background: "#888" }}
-            >
-              Wachtwoord vergeten? Stuur reset-link
-            </button>
+            <div className="vertical-buttons">
+              <button
+                type="button"
+                className="btn"
+                onClick={handleWachtwoordWijzigen}
+                style={{ width: "100%", marginBottom: "1rem" }}
+              >
+                Wijzig wachtwoord
+              </button>
+              <button
+                type="button"
+                className="btn"
+                onClick={handleResetPassword}
+                style={{ width: "100%", background: "#888" }}
+              >
+                Wachtwoord vergeten? Stuur reset-link
+              </button>
+            </div>
             <button
               type="button"
               className="btn"

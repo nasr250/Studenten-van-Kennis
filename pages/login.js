@@ -10,6 +10,7 @@ export default function Login() {
   const [error, setError] = useState(null);
   const [isRegistering, setIsRegistering] = useState(false);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [kunya, setKunya] = useState("");
   const router = useRouter();
 
   const handleLogin = async (e) => {
@@ -32,16 +33,34 @@ export default function Login() {
       setError("Wachtwoorden komen niet overeen.");
       return;
     }
+    if (!kunya.trim()) {
+      setError("Kunya is verplicht.");
+      return;
+    }
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
       });
       if (error) throw error;
+
+      // Profiel aanmaken met kunya
+      if (data.user) {
+        const { error: profielError } = await supabase.from("profielen").insert([
+          {
+            gebruiker_id: data.user.id,
+            email: data.user.email,
+            kunya: kunya.trim(),
+          },
+        ]);
+        if (profielError) throw profielError;
+      }
+
       alert("Registratie succesvol! Controleer je e-mail om je account te bevestigen.");
       setIsRegistering(false);
       setPassword("");
       setRepeatPassword("");
+      setKunya("");
     } catch (error) {
       setError(error.message);
     }
@@ -79,6 +98,15 @@ export default function Login() {
             : "Login"}
         </h1>
         {error && <div className={styles.error}>{error}</div>}
+        {isRegistering && (
+          <input
+            type="text"
+            placeholder="Kunya"
+            value={kunya}
+            onChange={(e) => setKunya(e.target.value)}
+            required={isRegistering}
+          />
+        )}        
         <input
           type="email"
           placeholder="Email"
@@ -94,12 +122,14 @@ export default function Login() {
               onChange={(e) => setPassword(e.target.value)}
             />
             {isRegistering && (
-              <input
-                type="password"
-                placeholder="Herhaal wachtwoord"
-                value={repeatPassword}
-                onChange={(e) => setRepeatPassword(e.target.value)}
-              />
+              <>
+                <input
+                  type="password"
+                  placeholder="Herhaal wachtwoord"
+                  value={repeatPassword}
+                  onChange={(e) => setRepeatPassword(e.target.value)}
+                />
+              </>
             )}
           </>
         )}
