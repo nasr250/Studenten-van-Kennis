@@ -11,12 +11,19 @@ export default function Home() {
   const [user, setUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [boeken, setBoeken] = useState([]);
-  const [toetsen, setToetsen] = useState([]);
-  const [notities, setNotities] = useState([]);
   const [stats, setStats] = useState({});
   const [topBoeken, setTopBoeken] = useState([]);
-  const [recentUsers, setRecentUsers] = useState([]); // Ensure recentUsers is initialized as an empty array
+  const [recentUsers, setRecentUsers] = useState([]);
+  const [profiel, setProfiel] = useState(null);
+
+  // Gebruiker-dashboard state
+  const [voortgang, setVoortgang] = useState([]);
+  const [actieveLeerpadIds, setActieveLeerpadIds] = useState([]);
+  const [actieveLeerpaden, setActieveLeerpaden] = useState([]);
+  const [laatsteLessen, setLaatsteLessen] = useState([]);
+  const [laatsteNotities, setLaatsteNotities] = useState([]);
+  const [aanbevolenLeerpaden, setAanbevolenLeerpaden] = useState([]);
+
   const router = useRouter();
 
   useEffect(() => {
@@ -38,7 +45,7 @@ export default function Home() {
           if (adminData) {
             setIsAdmin(true);
 
-            // Fetch admin-specific data
+            // --- ADMIN DASHBOARD (onveranderd) ---
             const [
               { count: usersCount },
               { count: boekenCount },
@@ -78,29 +85,79 @@ export default function Home() {
             setTopBoeken(topBooks);
             setRecentUsers(newUsers);
           } else {
-            // Fetch dashboard data for non-admin users
-            const { data: voortgang } = await supabase
-              .from("voortgang")
-              .select("*, boek:boek_id(*)")
+            // --- GEBRUIKER DASHBOARD ---
+            // Profiel
+            const { data: profiel } = await supabase
+              .from("profielen")
+              .select("kunya, voornaam")
+              .eq("gebruiker_id", user.id)
+              .single();
+            setProfiel(profiel);
+
+            // Voortgang (media_timestamps)
+            const { data: timestamps } = await supabase
+              .from("media_timestamps")
+              .select("les_id, updated_at")
               .eq("gebruiker_id", user.id);
 
-            const { data: toetsResultaten } = await supabase
-              .from("toets_resultaten")
-              .select("*, toets:toets_id(titel, type)")
-              .eq("gebruiker_id", user.id)
-              .order("voltooid_op", { ascending: false })
-              .limit(5);
+            setVoortgang(timestamps || []);
 
-            const { data: gebruikersNotities } = await supabase
-              .from("notities")
-              .select("*, les:les_id(titel)")
+            // Actieve leerpaden (leerpad_inschrijvingen)
+            const { data: inschrijvingen } = await supabase
+              .from("leerpad_inschrijvingen")
+              .select("leerpad_id")
+              .eq("gebruiker_id", user.id);
+
+            const leerpadIds = (inschrijvingen || []).map((i) => i.leerpad_id);
+            setActieveLeerpadIds(leerpadIds);
+
+            // Haal details van actieve leerpaden op
+            let actieveLeerpadenData = [];
+            if (leerpadIds.length > 0) {
+              const { data: leerpaden } = await supabase
+                .from("leerpad")
+                .select("*")
+                .in("id", leerpadIds);
+              actieveLeerpadenData = leerpaden || [];
+            }
+            setActieveLeerpaden(actieveLeerpadenData);
+
+            // Laatste activiteit: lessen (op basis van media_timestamps)
+            let laatsteLessenData = [];
+            if (timestamps && timestamps.length > 0) {
+              const lesIds = timestamps
+                .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
+                .slice(0, 3)
+                .map((t) => t.les_id);
+
+              if (lesIds.length > 0) {
+                const { data: lessen } = await supabase
+                  .from("lessen")
+                  .select("id, titel, boek_id")
+                  .in("id", lesIds);
+                laatsteLessenData = lessen || [];
+              }
+            }
+            setLaatsteLessen(laatsteLessenData);
+
+            // Laatste notities
+            const { data: notities } = await supabase
+              .from("les_notities")
+              .select("id, notitie, updated_at, les:les_id(titel)")
               .eq("gebruiker_id", user.id)
               .order("updated_at", { ascending: false })
-              .limit(5);
+              .limit(3);
+            setLaatsteNotities(notities || []);
 
-            setBoeken(voortgang);
-            setToetsen(toetsResultaten);
-            setNotities(gebruikersNotities);
+            // Aanbevolen leerpaden (als gebruiker geen voortgang of inschrijvingen heeft)
+            if ((timestamps?.length ?? 0) === 0 && leerpadIds.length === 0) {
+              const { data: leerpaden } = await supabase
+                .from("leerpad")
+                .select("id, titel, beschrijving")
+                .order("volgorde_nummer", { ascending: true })
+                .limit(3);
+              setAanbevolenLeerpaden(lerpaden || []);
+            }
           }
 
           setUser(user);
@@ -130,6 +187,7 @@ export default function Home() {
   return (
     <div className={styles.container}>
       {isAdmin ? (
+        // --- ADMIN DASHBOARD (onveranderd) ---
         <div>
           <h1 >🛠️ Admin Dashboard</h1>
 
@@ -173,7 +231,7 @@ export default function Home() {
           <section>
             <h2 className="text-xl font-semibold mt-6 mb-2">🆕 Nieuwe Gebruikers</h2>
             <div className="grid gap-4 md:grid-cols-2">
-              {recentUsers?.length > 0 ? ( // Add a fallback check
+              {recentUsers?.length > 0 ? (
                 recentUsers.map((u) => (
                   <Card key={u.id}>
                     <CardContent className="p-4">
@@ -185,75 +243,115 @@ export default function Home() {
                   </Card>
                 ))
               ) : (
-                <p>Geen nieuwe gebruikers gevonden.</p> // Fallback message
+                <p>Geen nieuwe gebruikers gevonden.</p>
               )}
             </div>
           </section>
         </div>
       ) : (
+        // --- GEBRUIKER DASHBOARD ---
         <div>
-          <h1>📚 Mijn Dashboard</h1>
+          {/* 1. Welkom & voortgangsoverzicht */}
+          <section className="mb-6">
+            <h2 className="text-xl font-semibold mb-2">
+              Assalaamoe 'alaykoem, {profiel?.kunya || profiel?.voornaam || user.email}!
+            </h2>
 
-          <section>
-            <h2 className="text-xl font-semibold mb-2">📖 Mijn Boeken</h2>
+          </section>
+
+          {/* 2. Actieve leerpaden */}
+          <section className="mb-6">
+            <h2 className="text-xl font-semibold mb-2">📚 Actieve Leerpaden</h2>
+            {actieveLeerpaden.length > 0 ? (
+              <div className="grid gap-4 md:grid-cols-2">
+                {actieveLeerpaden.map((lp) => (
+                  <Card key={lp.id}>
+                    <CardContent className="p-4">
+                      <h3 className="font-medium">{lp.titel}</h3>
+                      <p className="text-sm">{lp.beschrijving}</p>
+                      <Button className="mt-3" href={`/leerpad/${lp.id}`}>
+                        Bekijk leerpad
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <>
+                <p>Je hebt nog geen actieve leerpaden.</p>
+                {/* 4. Aanbevolen leerpaden als motivatie */}
+                {aanbevolenLeerpaden.length > 0 && (
+                  <div className="mt-4">
+                    <h3 className="font-semibold mb-2">Aanbevolen leerpaden om te starten:</h3>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {aanbevolenLeerpaden.map((lp) => (
+                        <Card key={lp.id}>
+                          <CardContent className="p-4">
+                            <h4 className="font-medium">{lp.titel}</h4>
+                            <p className="text-sm">{lp.beschrijving}</p>
+                            <Button className="mt-3" href={`/leerpad/${lp.id}`}>
+                              Start dit leerpad
+                            </Button>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </section>
+
+          {/* 3. Laatste activiteit (lessen/notities) */}
+          <section className="mb-6">
+            <h2 className="text-xl font-semibold mb-2">🕒 Laatste Activiteit</h2>
             <div className="grid gap-4 md:grid-cols-2">
-              {boeken.map((item) => (
-                <Card key={item.id}>
+              {laatsteLessen.map((les) => (
+                <Card key={les.id}>
                   <CardContent className="p-4">
-                    <h3 className="text-lg font-medium">{item.boek.titel}</h3>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      {item.voltooide_eindtoets
-                        ? "✅ Eindtoets voltooid"
-                        : "📚 Bezig met leren"}
-                    </p>
-                    <Progress
-                      value={
-                        (item.voltooide_lessons.length /
-                          item.boek.aantal_lessons) *
-                        100
-                      }
-                    />
-                    <Button className="mt-3" href={`/boek/${item.boek.id}`}>
-                      Ga verder
+                    <h3 className="font-medium">{les.titel}</h3>
+                    <Button className="mt-3" href={`/lessen/${les.id}`}>
+                      Ga naar les
                     </Button>
                   </CardContent>
                 </Card>
               ))}
-            </div>
-          </section>
-
-          <section>
-            <h2 className="text-xl font-semibold mb-2">🧠 Laatste Toetsen</h2>
-            <div className="grid gap-4 md:grid-cols-2">
-              {toetsen.map((toets) => (
-                <Card key={toets.id}>
-                  <CardContent className="p-4">
-                    <h3 className="font-medium">{toets.toets.titel}</h3>
-                    <p className="text-sm">
-                      Score: {toets.score} / {toets.totaal_vragen}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {format(new Date(toets.voltooid_op), "dd MMM yyyy")}
-                    </p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </section>
-
-          <section>
-            <h2 className="text-xl font-semibold mb-2">📝 Mijn Notities</h2>
-            <div className="grid gap-4 md:grid-cols-2">
-              {notities?.map((n) => (
+              {laatsteNotities.map((n) => (
                 <Card key={n.id}>
                   <CardContent className="p-4">
-                    <h3 className="font-medium">{n.les.titel}</h3>
-                    <p className="text-sm line-clamp-3">{n.inhoud}</p>
+                    <h3 className="font-medium">{n.les?.titel || "Onbekende les"}</h3>
+                    <p className="text-sm line-clamp-3">{n.notitie}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {format(new Date(n.updated_at), "dd MMM yyyy")}
+                    </p>
                   </CardContent>
                 </Card>
               ))}
+              {laatsteLessen.length === 0 && laatsteNotities.length === 0 && (
+                <p>Je hebt nog geen recente lessen of notities. Begin vandaag met leren!</p>
+              )}
             </div>
           </section>
+
+          {/* 4. Aanbevolen volgende stappen (optioneel extra motivatie) */}
+          {voortgang.length === 0 && actieveLeerpaden.length === 0 && aanbevolenLeerpaden.length > 0 && (
+            <section className="mb-6">
+              <h2 className="text-xl font-semibold mb-2">✨ Aanbevolen Volgende Stappen</h2>
+              <div className="grid gap-4 md:grid-cols-2">
+                {aanbevolenLeerpaden.map((lp) => (
+                  <Card key={lp.id}>
+                    <CardContent className="p-4">
+                      <h4 className="font-medium">{lp.titel}</h4>
+                      <p className="text-sm">{lp.beschrijving}</p>
+                      <Button className="mt-3" href={`/leerpad/${lp.id}`}>
+                        Start dit leerpad
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </section>
+          )}
         </div>
       )}
     </div>
