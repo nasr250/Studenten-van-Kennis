@@ -156,7 +156,7 @@ export default function Home() {
                 .select("id, titel, beschrijving")
                 .order("volgorde_nummer", { ascending: true })
                 .limit(3);
-              setAanbevolenLeerpaden(lerpaden || []);
+              setAanbevolenLeerpaden(leerpaden || []);
             }
           }
 

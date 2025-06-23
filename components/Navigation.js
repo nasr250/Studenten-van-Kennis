@@ -17,16 +17,19 @@ export default function Navigation() {
         data: { user },
       } = await supabase.auth.getUser();
 
-      const { data: adminData, error} = await supabase
+      if (!user) {
+        setIsAdmin(false);
+        setLoading(false);
+        return;
+      }
+
+      const { data: adminData } = await supabase
         .from("admins")
         .select("*")
         .eq("user_id", user.id)
         .single();
 
-      if (adminData) {
-        setIsAdmin(true);
-      }
-
+      setIsAdmin(!!adminData);
       setLoading(false);
     };
 

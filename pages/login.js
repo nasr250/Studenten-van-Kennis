@@ -6,27 +6,58 @@ import styles from "../styles/Login.module.css";
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [repeatPassword, setRepeatPassword] = useState(""); // toegevoegd
+  const [repeatPassword, setRepeatPassword] = useState("");
   const [error, setError] = useState(null);
   const [isRegistering, setIsRegistering] = useState(false);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [kunya, setKunya] = useState("");
   const router = useRouter();
 
+  // LOGIN: maak profiel aan met kunya uit metadata indien nodig
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { data: userData, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       if (error) throw error;
+
+      const user = userData.user;
+      // Profiel ophalen
+      const { data: profiel } = await supabase
+        .from("profielen")
+        .select("*")
+        .eq("gebruiker_id", user.id)
+        .single();
+
+      if (!profiel) {
+        // Haal kunya uit user_metadata
+        let ingevuldeKunya = user.user_metadata?.kunya?.trim() || "";
+        if (!ingevuldeKunya) {
+          ingevuldeKunya = prompt("Vul je kunya in:");
+          if (!ingevuldeKunya) {
+            setError("Kunya is verplicht voor je profiel.");
+            return;
+          }
+        }
+        const { error: profielError } = await supabase.from("profielen").insert([
+          {
+            gebruiker_id: user.id,
+            email: user.email,
+            kunya: ingevuldeKunya,
+          },
+        ]);
+        if (profielError) throw profielError;
+      }
+
       router.push("/");
     } catch (error) {
       setError(error.message);
     }
   };
 
+  // REGISTRATIE: sla kunya op in user_metadata
   const handleRegister = async (e) => {
     e.preventDefault();
     if (password !== repeatPassword) {
@@ -41,20 +72,11 @@ export default function Login() {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          data: { kunya: kunya.trim() }, // <-- sla kunya op in metadata
+        },
       });
       if (error) throw error;
-
-      // Profiel aanmaken met kunya
-      if (data.user) {
-        const { error: profielError } = await supabase.from("profielen").insert([
-          {
-            gebruiker_id: data.user.id,
-            email: data.user.email,
-            kunya: kunya.trim(),
-          },
-        ]);
-        if (profielError) throw profielError;
-      }
 
       alert("Registratie succesvol! Controleer je e-mail om je account te bevestigen.");
       setIsRegistering(false);
@@ -106,7 +128,7 @@ export default function Login() {
             onChange={(e) => setKunya(e.target.value)}
             required={isRegistering}
           />
-        )}        
+        )}
         <input
           type="email"
           placeholder="Email"
