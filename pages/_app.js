@@ -11,6 +11,7 @@ export default function App({ Component, pageProps }) {
   const router = useRouter();
 
   const isLoginPage = router.pathname === "/login";
+  const isResetPasswordPage = router.pathname === "/reset-password";
 
   useEffect(() => {
     const checkUser = async () => {
@@ -59,7 +60,7 @@ export default function App({ Component, pageProps }) {
     <UserProvider>
       {user ? (
         <>
-          {!isLoginPage && <Navigation />}
+          {!isLoginPage && !isResetPasswordPage && <Navigation />}
           <Component {...pageProps} user={user} />
         </>
       ) : (
