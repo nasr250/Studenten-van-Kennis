@@ -89,7 +89,7 @@ export default function Home() {
             // Profiel
             const { data: profiel } = await supabase
               .from("profielen")
-              .select("kunya, voornaam")
+              .select("kunya")
               .eq("gebruiker_id", user.id)
               .single();
             setProfiel(profiel);
@@ -254,7 +254,7 @@ export default function Home() {
           {/* 1. Welkom & voortgangsoverzicht */}
           <section className="mb-6">
             <h2 className="text-xl font-semibold mb-2">
-              Assalaamoe 'alaykoem, {profiel?.kunya || profiel?.voornaam || user.email}!
+              Assalaamoe 'alaykoem, {profiel?.kunya}!
             </h2>
 
           </section>
