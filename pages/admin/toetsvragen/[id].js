@@ -178,10 +178,10 @@ export default function ToetsVragenBeheer() {
           </FormControl>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenQuestionDialog(false)} color="secondary">
+          <Button onClick={() => setOpenQuestionDialog(false)} color="--primary-hover">
             Annuleren
           </Button>
-          <Button onClick={handleSaveQuestion} color="primary">
+          <Button onClick={handleSaveQuestion} color="--primary">
             Opslaan
           </Button>
         </DialogActions>

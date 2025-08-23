@@ -361,7 +361,7 @@ export default function BookEditPage() {
         />
         <Button
           variant="contained"
-          color="secondary"
+          color="--primary-hover"
           onClick={handleProcessPlaylist}
         >
           Lessenreeks en Playlist Verwerken

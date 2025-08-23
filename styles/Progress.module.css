@@ -90,7 +90,7 @@
 }
 
 .viewButton:hover {
-  background: var(--secondary-color);
+  background: var(--primary-hover);
 }
 
 .startedText {

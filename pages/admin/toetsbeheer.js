@@ -540,10 +540,10 @@ export default function ToetsBeheer() {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenDialog(false)} color="secondary">
+          <Button onClick={() => setOpenDialog(false)} color="--primary-hover">
             Annuleren
           </Button>
-          <Button onClick={handleSaveToets} color="primary">
+          <Button onClick={handleSaveToets} color="--primary">
             Opslaan
           </Button>
         </DialogActions>

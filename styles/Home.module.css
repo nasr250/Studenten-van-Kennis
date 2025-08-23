@@ -65,7 +65,7 @@
 }
 
 .bookLink:hover {
-  color: var(--secondary-color);
+  color: var(--primary-hover);
 }
 
 .container {
@@ -116,11 +116,11 @@
 
 .lessonLink:hover {
   transform: translateX(5px);
-  color: var(--secondary-color);
+  color: var(--primary-hover);
 }
 
 .completedBadge {
-  background: var(--secondary-color);
+  background: var(--primary-hover);
   color: white;
   padding: 0.2rem 0.5rem;
   border-radius: 50%;
@@ -137,7 +137,7 @@
 }
 
 .button:hover {
-  background: var(--secondary-color);
+  background: var(--primary-hover);
 }
 .lessonLink.completed {
   background: #e8f5e9;
