@@ -71,7 +71,12 @@ export default function Modal({ isOpen, onClose, lessenreeks }) {
               {lessenreeks.voortgangPercentage}%
             </p>
           </section>
-
+                    <button
+            onClick={downloadAllNotesPdf}
+            className={styles.pdfButton} // Changed from downloadButton to pdfButton
+          >
+            Download alle notities als PDF
+          </button>
           <section>
             <h3>Notities per Les</h3>
             <div className={styles.accordion}>
@@ -113,13 +118,6 @@ export default function Modal({ isOpen, onClose, lessenreeks }) {
               ))}
             </div>
           </section>
-
-          <button
-            onClick={downloadAllNotesPdf}
-            className={styles.downloadButton}
-          >
-            Download alle notities als PDF
-          </button>
         </div>
       </div>
     </div>
