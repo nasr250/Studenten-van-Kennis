@@ -1,45 +1,65 @@
-import { useEffect } from "react";
+import { useState } from "react";
 import styles from "../styles/Modal.module.css";
 
 export default function Modal({ isOpen, onClose, lessenreeks }) {
-  useEffect(() => {
-    if (isOpen) {
-      const handleKeyDown = (event) => {
-        if (event.key === "Escape") {
-          onClose();
-        }
-      };
-      document.addEventListener("keydown", handleKeyDown);
-      return () => document.removeEventListener("keydown", handleKeyDown);
+  const [expandedLesId, setExpandedLesId] = useState(null);
+
+  const toggleLes = (lesId) => {
+    setExpandedLesId(expandedLesId === lesId ? null : lesId);
+  };
+
+  const downloadAllNotesPdf = async () => {
+    try {
+      const resp = await fetch("/api/generate-notities-pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lessenreeks }),
+      });
+
+      // debug: als niet ok, lees tekst en log
+      if (!resp.ok) {
+        const text = await resp.text();
+        console.error("API niet ok:", resp.status, text);
+        throw new Error("PDF genereren mislukt: " + resp.status);
+      }
+
+      const contentType = resp.headers.get("content-type") || "";
+      if (!contentType.includes("application/pdf")) {
+        const text = await resp.text();
+        console.error(
+          "Geen PDF terug, content-type:",
+          contentType,
+          text
+        );
+        throw new Error("Geen PDF ontvangen van server");
+      }
+
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${lessenreeks.titel || "notities"}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+      alert("Kon PDF niet downloaden. Bekijk console voor details.");
     }
-  }, [isOpen, onClose]);
+  };
 
   if (!isOpen || !lessenreeks) return null;
 
-  const handleViewToetsDetails = (toetsId) => {
-    // Logic to view toets details (e.g., redirect or open another modal)
-    console.log(`Viewing details for toets ID: ${toetsId}`);
-  };
-
   return (
-    <div
-      className={styles.modalOverlay}
-      role="dialog"
-      aria-labelledby="modal-title"
-      aria-modal="true"
-    >
+    <div className={styles.modalOverlay} role="dialog" aria-modal="true">
       <div className={styles.modalContent}>
-        <button
-          className={styles.closeButton}
-          onClick={onClose}
-          aria-label="Sluit modal"
-        >
+        <button className={styles.closeButton} onClick={onClose}>
           ✖
         </button>
-        <h2 id="modal-title">{lessenreeks.titel}</h2>
+        <h2>{lessenreeks.titel}</h2>
 
         <div className={styles.modalBody}>
-          {/* Voortgang */}
           <section>
             <h3>Voortgang</h3>
             <p>
@@ -52,74 +72,54 @@ export default function Modal({ isOpen, onClose, lessenreeks }) {
             </p>
           </section>
 
-          {/* Notities */}
           <section>
-            <h3>Notities</h3>
-            {lessenreeks.notities.length > 0 ? (
-              <div className={styles.scrollableSection}>
-                <ul>
-                  {lessenreeks.notities.map((notitie) => (
-                    <li key={notitie.les_id}>
-                      <strong>Les:</strong> {notitie.lesNaam} <br />
-                      <strong>Notitie:</strong>{" "}
-                      <div
-                        dangerouslySetInnerHTML={{ __html: notitie.notitie }}
-                      />
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : (
-              <p>Geen notities beschikbaar.</p>
-            )}
+            <h3>Notities per Les</h3>
+            <div className={styles.accordion}>
+              {lessenreeks.lessen?.map((les) => (
+                <div key={les.id} className={styles.accordionItem}>
+                  <button
+                    className={`${styles.accordionHeader} ${
+                      expandedLesId === les.id ? styles.active : ""
+                    }`}
+                    onClick={() => toggleLes(les.id)}
+                  >
+                    <span>
+                      Les {les.volgorde_nummer}: {les.titel}
+                    </span>
+                    <span className={styles.accordionIcon}>
+                      {expandedLesId === les.id ? "▼" : "▶"}
+                    </span>
+                  </button>
+
+                  {expandedLesId === les.id && (
+                    <div className={styles.accordionContent}>
+                      {les.notities?.length > 0 ? (
+                        les.notities.map((notitie) => (
+                          <div key={notitie.id} className={styles.notitie}>
+                            <div
+                              dangerouslySetInnerHTML={{ __html: notitie.notitie }}
+                            />
+                            <small className={styles.notitieDate}>
+                              {new Date(notitie.created_at).toLocaleDateString()}
+                            </small>
+                          </div>
+                        ))
+                      ) : (
+                        <p>Geen notities voor deze les.</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </section>
 
-          {/* Toetsen */}
-          <section>
-            <h3>Toetsen</h3>
-            {lessenreeks.toetsen.length > 0 ? (
-              <div className={styles.scrollableSection}>
-                <ul>
-                  {lessenreeks.toetsen.map((toets) => (
-                    <li key={toets.id}>
-                      <strong>Toets:</strong> {toets.titel} <br />
-                      <strong>Type:</strong> {toets.type} <br />
-                      <button
-                        className={styles.viewButton}
-                        onClick={() => handleViewToetsDetails(toets.id)}
-                      >
-                        Bekijk Details
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : (
-              <p>Geen toetsen beschikbaar.</p>
-            )}
-          </section>
-
-          {/* Toetsresultaten */}
-          <section>
-            <h3>Toetsresultaten</h3>
-            {lessenreeks.resultaten.length > 0 ? (
-              <div className={styles.scrollableSection}>
-                <ul>
-                  {lessenreeks.resultaten.map((resultaat) => (
-                    <li key={resultaat.toets_id}>
-                      <strong>Toets ID:</strong> {resultaat.toets_id} <br />
-                      <strong>Score:</strong> {resultaat.score}/
-                      {resultaat.totaal_vragen} <br />
-                      <strong>Resultaat:</strong>{" "}
-                      {((resultaat.score / resultaat.totaal_vragen) * 100).toFixed(2)}%
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : (
-              <p>Geen toetsresultaten beschikbaar.</p>
-            )}
-          </section>
+          <button
+            onClick={downloadAllNotesPdf}
+            className={styles.downloadButton}
+          >
+            Download alle notities als PDF
+          </button>
         </div>
       </div>
     </div>

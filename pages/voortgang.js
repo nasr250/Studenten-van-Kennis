@@ -42,7 +42,10 @@ export default function VoortgangPage() {
     if (!userId) return;
 
     try {
+      // Add toetsen query
       const { data: lessenreeksen } = await supabase.from("lessenreeksen").select("*");
+      const { data: toetsen } = await supabase.from("toetsen").select("*");
+      const { data: resultaten } = await supabase.from("toets_resultaten").select("*").eq("gebruiker_id", userId);
 
       // Filter lessenreeksen op boeken die in mijn bibliotheek zitten
       const gefilterdeLessenreeksen = lessenreeksen.filter(
@@ -54,22 +57,13 @@ export default function VoortgangPage() {
         .select("*")
         .eq("gebruiker_id", userId);
 
-      const { data: notities } = await supabase
-        .from("les_notities")
-        .select("les_id, notitie")
-        .eq("gebruiker_id", userId);
-
-      const { data: toetsen } = await supabase
-        .from("toetsen")
-        .select("id, type, les_id, lessenreeks_id, titel");
-
       const { data: lessen } = await supabase
         .from("lessen")
-        .select("id, lessenreeks_id");
+        .select("id, lessenreeks_id, titel, volgorde_nummer"); // Add titel and volgorde_nummer
 
-      const { data: resultaten } = await supabase
-        .from("toets_resultaten")
-        .select("toets_id, score, totaal_vragen, voltooid_op")
+      const { data: notities } = await supabase
+        .from("les_notities")
+        .select("*")
         .eq("gebruiker_id", userId);
 
       const dataPerLessenreeks = gefilterdeLessenreeksen.map((lessenreeks) => {
@@ -106,6 +100,15 @@ export default function VoortgangPage() {
         // Voeg boolean toe: afgerond als alle lessen voltooid zijn
         const afgerond = totaleLessen > 0 && voltooideLessen === totaleLessen;
 
+        // Add lessen with their notities to the lessenreeks
+        const lessenInReeksMetNotities = lessen
+          .filter(les => les.lessenreeks_id === lessenreeks.id)
+          .map(les => ({
+            ...les,
+            notities: notities.filter(n => n.les_id === les.id)
+          }))
+          .sort((a, b) => a.volgorde_nummer - b.volgorde_nummer);
+
         return {
           id: lessenreeks.id,
           titel: lessenreeks.titel,
@@ -118,6 +121,7 @@ export default function VoortgangPage() {
           notities: notitiesInReeks,
           resultaten: resultatenInReeks,
           afgerond, // <-- toegevoegd
+          lessen: lessenInReeksMetNotities,
         };
       });
 
@@ -195,6 +199,8 @@ export default function VoortgangPage() {
   return (
     <div className={styles.container}>
       <h1 className={styles.title}>Mijn Voortgang</h1>
+      
+      {/* Filters behouden */}
       <div className={styles.filters}>
         <select
           className={styles.filterDropdown}
@@ -215,12 +221,25 @@ export default function VoortgangPage() {
           <option value="voortgang">Sorteer op Voortgang</option>
         </select>
       </div>
+
       <div className={styles.progressGrid}>
         {filteredData.map((lessenreeks) => (
           <div
             key={lessenreeks.id}
             className={styles.progressCard}
             onClick={() => openModal(lessenreeks)}
+            style={{
+              cursor: 'pointer',
+              transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-5px)';
+              e.currentTarget.style.boxShadow = '0 6px 12px rgba(0,0,0,0.15)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+            }}
           >
             <h3>{lessenreeks.titel}</h3>
             <div className={styles.progressBar}>

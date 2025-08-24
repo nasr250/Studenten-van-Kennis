@@ -113,3 +113,83 @@
 .viewButton:hover {
     background-color: #0056b3;
 }
+
+.accordion {
+  width: 100%;
+  margin-top: 1rem;
+}
+
+.accordionItem {
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+}
+
+.accordionHeader {
+  width: 100%;
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f8f8f8;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+}
+
+.accordionHeader:hover {
+  background-color: #f0f0f0;
+}
+
+.accordionHeader.active {
+  background-color: #e8e8e8;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.accordionIcon {
+  font-size: 0.8rem;
+  transition: transform 0.2s ease;
+}
+
+.accordionContent {
+  padding: 1rem;
+  background-color: #fff;
+}
+
+.notitie {
+  padding: 0.5rem 0;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid #eee;
+}
+
+.notitie:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.notitieDate {
+  display: block;
+  color: #666;
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+}
+
+.pdfButton {
+  display: inline-block;
+  width: 100%;
+  padding: 12px;
+  background-color: #4a5568;
+  color: white;
+  text-align: center;
+  border-radius: 4px;
+  margin-top: 1rem;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.pdfButton:hover {
+  background-color: #2d3748;
+}
